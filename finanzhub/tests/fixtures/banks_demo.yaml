@@ -1,0 +1,8 @@
+adapters:
+  - name: "demo"
+    provider: "demo"
+    enabled: true
+    options:
+      seed: 42
+      history_days: 90
+active_adapter: "demo"

@@ -1,0 +1,63 @@
+securities:
+  - isin: "IE00B4L5Y983"   # MSCI World IWDA
+    name: "iShares Core MSCI World"
+    quantity: 42.5
+    purchase_price: 68.50
+  - isin: "IE00B3XXRP09"   # S&P 500 CSPX
+    name: "iShares Core S&P 500"
+    quantity: 30.0
+    purchase_price: 410.00
+  - isin: "US0378331005"   # Apple
+    name: "Apple Inc."
+    quantity: 5.0
+    purchase_price: 140.00
+  - isin: "US5949181045"   # Microsoft
+    name: "Microsoft Corp."
+    quantity: 4.0
+    purchase_price: 305.00
+
+real_estate:
+  - id: "MFH-FELDSTR"
+    name: "MFH Feldstraße 14"
+    current_value: 650000
+    purchase_price: 480000
+    value_growth: 0.02
+    units: 4
+    living_area: 320
+    rent_monthly: 3200
+    rent_growth: 0.015
+    operating_costs_monthly: 350
+    maintenance_reserve_monthly: 280
+    loan:
+      loan_remaining: 320000
+      interest_rate: 0.035
+      loan_payment_monthly: 1650
+    tenants:
+      - name: "Mieter A"
+        wohnflaeche: 75
+        iban: "DE11111111111111111111"
+        keyword: "MIETE A"
+        cold_rent_monthly: 800
+        expected_by_day: 3
+      - name: "Mieter B"
+        wohnflaeche: 90
+        iban: "DE22222222222222222222"
+        keyword: "MIETE B"
+        cold_rent_monthly: 1100
+        expected_by_day: 3
+      - name: "Mieter C"
+        wohnflaeche: 80
+        iban: "DE33333333333333333333"
+        keyword: "MIETE C"
+        cold_rent_monthly: 950
+        expected_by_day: 3
+    operating_costs:
+      - name: "Hausverwaltung"
+        amount_monthly: 80
+        umlagefaehig: true
+      - name: "Versicherung"
+        amount_monthly: 40
+        umlagefaehig: true
+      - name: "Instandhaltung Verwaltung"
+        amount_monthly: 30
+        umlagefaehig: false

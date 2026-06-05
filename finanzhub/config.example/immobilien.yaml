@@ -1,0 +1,21 @@
+real_estate:
+  - id: "MFH-FELDSTR"
+    name: "MFH Feldstraße 14"
+    current_value: 650000
+    purchase_price: 480000
+    value_growth: 0.02
+    units: 4
+    rent_monthly: 3200
+    rent_growth: 0.015
+    operating_costs_monthly: 350
+    maintenance_reserve_monthly: 280
+    loan:
+      loan_remaining: 320000
+      interest_rate: 0.035
+      loan_payment_monthly: 1650
+    tenants:
+      - name: "Mieter A"
+        iban: "DE11111111111111111111"
+        keyword: "MIETE A"
+        cold_rent_monthly: 800
+        expected_by_day: 3

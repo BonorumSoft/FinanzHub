@@ -1,0 +1,19 @@
+adapters:
+  - name: "demo"
+    provider: "demo"
+    enabled: true
+    options:
+      seed: 42
+      history_days: 90
+
+  # Für den Echtbetrieb mit Enable Banking:
+  # - name: "enable_banking_main"
+  #   provider: "enable_banking"
+  #   enabled: false
+  #   options:
+  #     key_id: "${ENABLE_BANKING_KEY_ID}"
+  #     private_key_path: "/run/secrets/enable_banking.pem"
+  #     app_id: "${ENABLE_BANKING_APP_ID}"
+  #     base_url: "https://api.enablebanking.com"
+
+active_adapter: "demo"

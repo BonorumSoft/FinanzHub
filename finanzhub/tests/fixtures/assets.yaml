@@ -1,0 +1,46 @@
+securities:
+  - isin: "IE00B4L5Y983"
+    name: "MSCI World"
+    quantity: 10.0
+    purchase_price: 70.0
+  - isin: "US0378331005"
+    name: "Apple"
+    quantity: 5.0
+    purchase_price: 150.0
+
+real_estate:
+  - id: "TEST-ASSET"
+    name: "Test MFH"
+    current_value: 500000
+    purchase_price: 400000
+    value_growth: 0.02
+    units: 2
+    living_area: 160
+    rent_monthly: 2000
+    rent_growth: 0.02
+    operating_costs_monthly: 200
+    maintenance_reserve_monthly: 150
+    loan:
+      loan_remaining: 250000
+      interest_rate: 0.035
+      loan_payment_monthly: 1200
+    tenants:
+      - name: "Mieter A"
+        wohnflaeche: 80
+        iban: "DE11111111111111111111"
+        keyword: "MIETE A"
+        cold_rent_monthly: 1000
+        expected_by_day: 3
+      - name: "Mieter B"
+        wohnflaeche: 80
+        iban: "DE22222222222222222222"
+        keyword: "MIETE B"
+        cold_rent_monthly: 1000
+        expected_by_day: 3
+    operating_costs:
+      - name: "Hausverwaltung"
+        amount_monthly: 50
+        umlagefaehig: true
+      - name: "Versicherung"
+        amount_monthly: 25
+        umlagefaehig: true

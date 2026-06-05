@@ -1,0 +1,17 @@
+matching:
+  standard_toleranz_euro: 1.00
+  standard_toleranz_tage: 5
+  warnung_ab_tag: 3
+
+vermoegen:
+  schwellwert_liquiditaet_euro: 1500.0
+  schwellwert_grosse_buchung_euro: 500.0
+  schwellwert_substanz_prozent: 2.0
+  schwellwert_substanz_tage: 30
+  substance_consecutive_months: 3
+  schwellwert_ruecklage_prozent: 60.0
+  schwellwert_portfolio_verlust_prozent: 10.0
+
+zeitzone: Europe/Berlin
+export_dir: data/export
+abrechnungsjahr: 2026

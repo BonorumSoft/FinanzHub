@@ -1,0 +1,7 @@
+{{ title|default('Event') }}
+
+[{{ severity|upper }}] {{ summary }}
+
+{% for k, v in (details or {}).items() -%}
+- {{ k }}: {{ v }}
+{% endfor %}

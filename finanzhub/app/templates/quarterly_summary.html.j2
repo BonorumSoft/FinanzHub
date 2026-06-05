@@ -1,0 +1,13 @@
+{% extends "base.html.j2" %}
+{% block content %}
+<h2 style="margin-top:0;font-size:18px;">Quartals-Report Q{{ quarter }} / {{ year }}</h2>
+<p>Zusammenfassung des Quartals.</p>
+<table style="width:100%;border-collapse:collapse;font-size:13px;">
+  {% for row in summary %}
+  <tr>
+    <td style="padding:6px;background:#f8fafc;width:50%;">{{ row.label }}</td>
+    <td style="padding:6px;text-align:right;font-variant-numeric:tabular-nums;">{{ row.value }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

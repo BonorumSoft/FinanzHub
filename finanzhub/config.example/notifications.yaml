@@ -1,0 +1,47 @@
+rules:
+  - id: "daily_wealth_report"
+    description: "Täglicher Netto-Vermögens-Report"
+    schedule: "daily"
+    hour: 6
+    minute: 0
+    recipients:
+      - "you@example.com"
+    enabled: true
+    template: "daily_wealth_report"
+    min_severity: "info"
+
+  - id: "monthly_portfolio"
+    description: "Monatlicher Portfolio-Report"
+    schedule: "monthly"
+    hour: 9
+    minute: 0
+    day_of_month: 1
+    recipients:
+      - "you@example.com"
+    enabled: true
+    template: "monthly_portfolio"
+    min_severity: "info"
+
+  - id: "rent_matrix"
+    description: "Mietmatrix zum 3. des Monats"
+    schedule: "monthly"
+    hour: 8
+    minute: 0
+    day_of_month: 3
+    recipients:
+      - "you@example.com"
+    enabled: true
+    template: "rent_matrix"
+    min_severity: "info"
+
+  - id: "quarterly_summary"
+    description: "Quartalsweise Übersicht"
+    schedule: "quarterly"
+    hour: 7
+    minute: 0
+    day_of_month: 1
+    recipients:
+      - "you@example.com"
+    enabled: true
+    template: "quarterly_summary"
+    min_severity: "info"

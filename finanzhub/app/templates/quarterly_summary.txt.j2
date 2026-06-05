@@ -1,0 +1,5 @@
+FinanzHub – Quartals-Report Q{{ quarter }} / {{ year }}
+
+{% for row in summary -%}
+- {{ row.label }}: {{ row.value }}
+{% endfor %}

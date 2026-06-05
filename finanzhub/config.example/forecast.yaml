@@ -1,0 +1,6 @@
+market_return: 0.07
+inflation: 0.02
+withdrawal_rate: 0.04
+retirement_age: 65
+current_age: 35
+safety_buffer_years: 0

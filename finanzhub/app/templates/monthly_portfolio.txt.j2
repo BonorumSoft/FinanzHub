@@ -1,0 +1,5 @@
+FinanzHub – Monatlicher Portfolio-Report ({{ period }})
+
+{% for row in allocation -%}
+- {{ row.label }}: {{ "%.2f"|format(row.value) }} EUR ({{ "%.1f"|format(row.share) }} %)
+{% endfor %}

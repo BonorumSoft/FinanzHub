@@ -1,0 +1,55 @@
+services:
+  finanzhub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/bonorumsoft/finanzhub:latest
+    container_name: finanzhub
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://finanzhub:${DB_PASSWORD}@postgres:5432/finanzhub
+      CONFIG_DIR: /app/config
+      OUTPUT_DIR: /app/output
+      LOG_LEVEL: INFO
+      TZ: Europe/Berlin
+    volumes:
+      - ./config:/app/config:ro
+      - ./output:/app/output
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - finanzhub_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; from sqlalchemy import create_engine, text; e=create_engine(os.environ['DATABASE_URL']); e.connect().execute(text('SELECT 1'))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: finanzhub_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: finanzhub
+      POSTGRES_USER: finanzhub
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finanzhub -d finanzhub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - finanzhub_net
+
+volumes:
+  postgres_data:
+
+networks:
+  finanzhub_net:
+    driver: bridge

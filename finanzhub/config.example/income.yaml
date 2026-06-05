@@ -1,0 +1,9 @@
+expected_income:
+  - name: "Gehalt"
+    amount_min: 3400.0
+    amount_max: 3700.0
+    expected_by_day: 25
+    keywords:
+      - "GEHALT"
+      - "LOHN"
+      - "ENTGELT"

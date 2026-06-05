@@ -1,0 +1,28 @@
+{% extends "base.html.j2" %}
+{% block content %}
+<h2 style="margin-top:0;font-size:18px;">Mietabgleich {{ period }}</h2>
+<table style="width:100%;border-collapse:collapse;font-size:13px;">
+  <thead>
+    <tr style="background:#f1f5f9;">
+      <th style="text-align:left;padding:8px;">Mieter</th>
+      <th style="text-align:right;padding:8px;">Erwartet</th>
+      <th style="text-align:right;padding:8px;">Eingegangen</th>
+      <th style="text-align:right;padding:8px;">Status</th>
+      <th style="text-align:left;padding:8px;">Match</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in results %}
+    <tr>
+      <td style="padding:8px;">{{ r.tenant }}</td>
+      <td style="padding:8px;text-align:right;font-variant-numeric:tabular-nums;">{{ "%.2f"|format(r.expected_amount) }} €</td>
+      <td style="padding:8px;text-align:right;font-variant-numeric:tabular-nums;">{{ "%.2f"|format(r.matched_amount) }} €</td>
+      <td style="padding:8px;text-align:right;color:{% if r.status == 'bezahlt' %}#15803d{% elif r.status == 'offen' %}#b91c1c{% else %}#d97706{% endif %};font-weight:600;">
+        {{ r.status }}
+      </td>
+      <td style="padding:8px;">{{ r.match_kind or '–' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

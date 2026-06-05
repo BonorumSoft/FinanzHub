@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "finanzhub"
+version = "0.1.0"
+description = "Self-hosted persönliches Finanzmanagementsystem"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "FinanzHub Contributors"}]
+dependencies = [
+    "pydantic>=2.6,<3.0",
+    "PyYAML>=6.0",
+    "SQLAlchemy>=2.0,<3.0",
+    "click>=8.1",
+    "APScheduler>=3.10",
+    "jinja2>=3.1",
+    "python-dateutil>=2.8",
+    "yfinance>=0.2.40",
+    "requests>=2.31",
+    "PyJWT>=2.8",
+    "cryptography>=42.0",
+    "tabulate>=0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1",
+    "pytest-mock>=3.12",
+    "ruff>=0.2",
+    "mypy>=1.8",
+    "freezegun>=1.4",
+]
+postgres = ["psycopg2-binary>=2.9"]
+
+[project.scripts]
+finanzhub = "app.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "B", "UP", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B", "SIM", "E402", "F401", "F841", "F842"]
+"app/main.py" = ["F841", "E402"]
+"app/cli.py" = ["E402", "F841"]
+"app/core/portfolio_engine.py" = ["E402"]
+"app/data/bank_collector.py" = ["E402"]
+"app/data/price_service.py" = ["E402"]
+"app/data/event_detector.py" = ["F841", "E402"]
+"app/banking/enable_banking_client.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+exclude = ["tests/", "config.example/"]
+
+[[tool.mypy.overrides]]
+module = "yfinance.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "integration: Integration tests (deselect with -m 'not integration')",
+    "slow: Slow-running tests",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/templates/*", "*/__init__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+show_missing = true

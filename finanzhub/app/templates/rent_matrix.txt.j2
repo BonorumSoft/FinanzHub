@@ -1,0 +1,5 @@
+FinanzHub – Mietabgleich {{ period }}
+
+{% for r in results -%}
+{{ r.tenant }}: {{ r.status }} (erwartet {{ "%.2f"|format(r.expected_amount) }} EUR, erhalten {{ "%.2f"|format(r.matched_amount) }} EUR, match={{ r.match_kind or '-' }})
+{% endfor %}

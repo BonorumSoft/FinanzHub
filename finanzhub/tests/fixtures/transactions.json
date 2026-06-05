@@ -1,0 +1,26 @@
+[
+  {
+    "id": "tx-001",
+    "booking_date": "2026-06-03",
+    "amount": 1000.0,
+    "description": "MIETE A",
+    "counterparty_iban": "DE11111111111111111111",
+    "counterparty_name": "Mieter A"
+  },
+  {
+    "id": "tx-002",
+    "booking_date": "2026-06-04",
+    "amount": 1000.0,
+    "description": "MIETE B",
+    "counterparty_iban": "DE22222222222222222222",
+    "counterparty_name": "Mieter B"
+  },
+  {
+    "id": "tx-003",
+    "booking_date": "2026-06-25",
+    "amount": 3500.0,
+    "description": "ARBEITGEBER GEHALT",
+    "counterparty_iban": "DE89370400440532013999",
+    "counterparty_name": "Arbeitgeber GmbH"
+  }
+]

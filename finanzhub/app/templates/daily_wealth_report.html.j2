@@ -1,0 +1,48 @@
+{% extends "base.html.j2" %}
+{% block content %}
+<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+  <tr>
+    <td style="padding:8px 12px;background:#f1f5f9;">Bankguthaben</td>
+    <td style="padding:8px 12px;text-align:right;font-variant-numeric:tabular-nums;">{{ "{:,.2f}".format(nw.bank_total) }} €</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 12px;background:#f1f5f9;">Depot</td>
+    <td style="padding:8px 12px;text-align:right;font-variant-numeric:tabular-nums;">{{ "{:,.2f}".format(nw.securities_total) }} €</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 12px;background:#f1f5f9;">Immobilien-EK</td>
+    <td style="padding:8px 12px;text-align:right;font-variant-numeric:tabular-nums;">{{ "{:,.2f}".format(nw.real_estate_equity) }} €</td>
+  </tr>
+  <tr style="font-weight:600;">
+    <td style="padding:12px;background:#0f172a;color:#ffffff;">Nettovermögen</td>
+    <td style="padding:12px;background:#0f172a;color:#ffffff;text-align:right;font-variant-numeric:tabular-nums;">{{ "{:,.2f}".format(nw.net_worth) }} €</td>
+  </tr>
+</table>
+{% if nw.positions %}
+<h3 style="margin-top:24px;font-size:14px;">Depot-Positionen</h3>
+<table style="width:100%;border-collapse:collapse;font-size:13px;">
+  <thead>
+    <tr style="background:#f1f5f9;">
+      <th style="text-align:left;padding:6px;">ISIN</th>
+      <th style="text-align:right;padding:6px;">Menge</th>
+      <th style="text-align:right;padding:6px;">Kurs</th>
+      <th style="text-align:right;padding:6px;">Wert</th>
+      <th style="text-align:right;padding:6px;">P&amp;L %</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in nw.positions %}
+    <tr>
+      <td style="padding:6px;font-family:ui-monospace,Menlo,monospace;">{{ p.isin }}</td>
+      <td style="padding:6px;text-align:right;font-variant-numeric:tabular-nums;">{{ "%.2f"|format(p.quantity) }}</td>
+      <td style="padding:6px;text-align:right;font-variant-numeric:tabular-nums;">{{ "%.2f"|format(p.current_price) }}</td>
+      <td style="padding:6px;text-align:right;font-variant-numeric:tabular-nums;">{{ "%.2f"|format(p.value) }}</td>
+      <td style="padding:6px;text-align:right;font-variant-numeric:tabular-nums;color:{% if p.pnl_percent >= 0 %}#15803d{% else %}#b91c1c{% endif %};">
+        {{ "%.2f"|format(p.pnl_percent) }}%
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

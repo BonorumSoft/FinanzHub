@@ -1,0 +1,25 @@
+{% extends "base.html.j2" %}
+{% block content %}
+<h2 style="margin-top:0;font-size:18px;">Monatlicher Portfolio-Report</h2>
+<p>Stand: {{ period }}</p>
+<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;">
+  <tr style="background:#f1f5f9;font-weight:600;">
+    <td style="padding:8px;">Asset-Klasse</td>
+    <td style="padding:8px;text-align:right;">Wert</td>
+    <td style="padding:8px;text-align:right;">Anteil</td>
+  </tr>
+  {% for row in allocation %}
+  <tr>
+    <td style="padding:8px;">{{ row.label }}</td>
+    <td style="padding:8px;text-align:right;font-variant-numeric:tabular-nums;">{{ "%.2f"|format(row.value) }} €</td>
+    <td style="padding:8px;text-align:right;font-variant-numeric:tabular-nums;">{{ "%.1f"|format(row.share) }} %</td>
+  </tr>
+  {% endfor %}
+</table>
+{% if top_movers %}
+<h3 style="font-size:14px;">Top-Bewegungen</h3>
+<ul>
+  {% for m in top_movers %}<li>{{ m }}</li>{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}
