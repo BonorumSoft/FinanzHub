@@ -85,6 +85,8 @@ docker compose up -d
 docker compose logs -f finanzhub
 ```
 
+Oder mit **Portainer**: siehe [`docs/PORTAINER.md`](docs/PORTAINER.md) — fertige Stack-Datei `docker-compose.portainer.yml` + Schritt-für-Schritt-Anleitung inkl. Secrets, Backups, Updates.
+
 ---
 
 ## 3. Inbetriebnahmeanleitung

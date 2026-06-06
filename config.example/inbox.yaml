@@ -1,0 +1,71 @@
+# Beleg-Inbox Konfiguration
+#
+# Aktiviert automatische Beleg-Verarbeitung per E-Mail.
+# Workflow: Mail an IMAP-Inbox → Anhang extrahieren → KI-Extraktion → DB.
+
+inbox:
+  enabled: true
+
+  imap:
+    host: "imap.gmail.com"
+    port: 993
+    use_ssl: true
+    username: ""            # aus .env: INBOX_IMAP_USER
+    password: ""            # aus .env: INBOX_IMAP_PASS
+    folder: "INBOX"
+    poll_interval_seconds: 60
+    mark_as_read: true
+    move_to_folder: "Belege/Verarbeitet"   # leer = nicht verschieben
+
+  # Absender-Whitelist (leer = alle akzeptiert, NICHT EMPFOHLEN)
+  allowed_senders:
+    - "tjorben@example.com"
+    - "fenja@example.com"
+
+  accepted_mimetypes:
+    - "image/jpeg"
+    - "image/png"
+    - "image/heic"
+    - "image/heif"
+    - "image/webp"
+    - "application/pdf"
+
+  storage_path: "/app/output/receipts"
+
+  extraction:
+    provider: "local_lm_studio"
+
+    local_lm_studio:
+      base_url: "http://192.168.3.160:1234/v1"
+      model: "qwen2.5-vl-7b-instruct"
+      timeout_seconds: 30
+
+    ollama:
+      base_url: "http://localhost:11434"
+      model: "llava:13b"
+      timeout_seconds: 45
+
+    openai:
+      api_key: ""            # aus .env: OPENAI_API_KEY
+      model: "gpt-4o-mini"
+      timeout_seconds: 20
+
+    anthropic:
+      api_key: ""            # aus .env: ANTHROPIC_API_KEY
+      model: "claude-haiku-4-5-20251001"
+      timeout_seconds: 20
+
+    fallback_provider: "anthropic"
+    min_confidence_for_match: 0.75
+
+  matching:
+    date_tolerance_days: 3
+    amount_tolerance_eur: 0.50
+    amount_tolerance_percent: 0.02
+    lookback_days: 14
+
+  confirmation:
+    enabled: true
+    reply_to_sender: true
+    include_match_details: true
+    include_extracted_data: true

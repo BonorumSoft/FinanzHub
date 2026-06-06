@@ -8,6 +8,7 @@ Willkommen in der FinanzHub-Dokumentation. Diese ist in **vier Dokumente** gegli
 | **[DEVELOPMENT.md](DEVELOPMENT.md)**        | Entwickler           | Architektur, Module, Erweiterung, Tests, Style      |
 | **[INTEGRATION.md](INTEGRATION.md)**        | Administrator/DevOps| Banken, SMTP, Datenbank, Scheduler, Sicherheit     |
 | **[USAGE.md](USAGE.md)**                    | Endbenutzer          | CLI-Referenz, Workflows, Rezepte, Fehlerbehebung    |
+| **[PORTAINER.md](PORTAINER.md)**            | Portainer-Admins     | Deployment via Portainer, Backups, Updates          |
 
 ---
 

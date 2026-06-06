@@ -169,10 +169,30 @@ def main() -> int:
     _first_report_cycle(engine, configs)
 
     cycles = _build_cycle_functions(engine, configs)
+    inbox_cfg = configs.get("inbox")
+    inbox_poll_callable = None
+    inbox_poll_seconds = 60
+    if inbox_cfg is not None and getattr(inbox_cfg, "enabled", False):
+        from app.inbox.inbox_engine import InboxEngine
+
+        def _inbox_poll() -> None:
+            try:
+                InboxEngine(inbox_cfg, engine).process_inbox()
+            except Exception as err:  # noqa: BLE001
+                logger.error("[inbox] Polling fehlgeschlagen: %s", err, exc_info=True)
+
+        inbox_poll_callable = _inbox_poll
+        inbox_poll_seconds = inbox_cfg.imap.poll_interval_seconds
+        logger.info("Beleg-Inbox aktiviert (Intervall: %ds)", inbox_poll_seconds)
+    else:
+        logger.info("Beleg-Inbox deaktiviert")
+
     scheduler = build_scheduler(
         daily=cycles["daily"],
         monthly=cycles["monthly"],
         quarterly=cycles["quarterly"],
+        inbox_poll=inbox_poll_callable,
+        inbox_poll_seconds=inbox_poll_seconds,
     )
 
     stop_requested = {"flag": False}

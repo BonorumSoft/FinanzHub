@@ -545,5 +545,281 @@ def _save_networth_snapshot(engine: Any, nw: Any) -> None:
         logger.warning("Konnte NetWorth-Snapshot nicht speichern: %s", err)
 
 
+# ---------------------------------------------------------------------------
+# Beleg-Inbox
+# ---------------------------------------------------------------------------
+
+
+@main.group(help="Beleg-Inbox: KI-gestützte Verarbeitung von Kassenbons/Rechnungen.")
+def inbox() -> None:
+    """Sub-Kommandos für die Beleg-Inbox."""
+
+
+@inbox.command("run", help="Inbox einmal verarbeiten (manuell auslösen).")
+@click.pass_context
+def inbox_run(ctx: click.Context) -> None:
+    """Pollt IMAP, verarbeitet neue Mails, persistiert Belege."""
+    from app.config_loader import load_inbox
+    from app.inbox.inbox_engine import InboxEngine
+
+    config_dir = ctx.obj["config_dir"]
+    cfg = load_inbox(config_dir)
+    if not cfg.enabled:
+        click.echo("Inbox ist deaktiviert (inbox.enabled=false in inbox.yaml)", err=True)
+        sys.exit(2)
+    engine = build_engine()
+    inbox_engine = InboxEngine(cfg, engine)
+    result = inbox_engine.process_inbox()
+    click.echo(
+        f"Mails: {result.mails_processed}, "
+        f"verarbeitet: {result.attachments_processed}, "
+        f"extrahiert: {result.receipts_extracted}, "
+        f"gematched: {result.receipts_matched}, "
+        f"fehler: {result.receipts_failed}"
+    )
+    if result.errors:
+        for err in result.errors:
+            click.echo(f"  - {err}", err=True)
+
+
+@inbox.command("status", help="Übersicht: pending / extrahiert / matched / fehler.")
+@click.option("--days", default=90, show_default=True, help="Zeitraum in Tagen.")
+@click.pass_context
+def inbox_status(ctx: click.Context, days: int) -> None:
+    """Statistik über die letzten N Tage."""
+    engine = build_engine()
+    try:
+        from sqlalchemy import text
+
+        with engine.begin() as conn:
+            rows = conn.execute(
+                text(
+                    "SELECT status, count(*) AS n "
+                    "FROM receipts "
+                    "WHERE received_at >= :cutoff "
+                    "GROUP BY status"
+                ),
+                {"cutoff": (date.today().toordinal() - days)},
+            ).fetchall()
+    except Exception as err:
+        click.echo(f"DB-Fehler: {err}", err=True)
+        sys.exit(1)
+
+    counts = {row[0]: row[1] for row in rows}
+    total = sum(counts.values())
+    click.echo("Beleg-Inbox Status")
+    click.echo("═" * 55)
+    click.echo(f"  Ausstehend (pending):          {counts.get('pending', 0)}")
+    click.echo(f"  Extrahiert, nicht gematched:   {counts.get('no_match', 0) + counts.get('manual_review', 0)}")
+    click.echo(f"  Erfolgreich gematched:        {counts.get('matched', 0)}")
+    click.echo(f"  Fehler:                        {counts.get('error', 0)}")
+    click.echo(f"  Gesamt (letzte {days} Tage):     {total}")
+
+    # Ungematchte auflisten
+    try:
+        with engine.begin() as conn:
+            unmatched = conn.execute(
+                text(
+                    "SELECT id, extracted_date, extracted_amount, extracted_merchant, received_at "
+                    "FROM receipts "
+                    "WHERE status IN ('no_match', 'manual_review') "
+                    "ORDER BY received_at DESC LIMIT 20"
+                )
+            ).fetchall()
+    except Exception:
+        unmatched = []
+
+    if unmatched:
+        click.echo("")
+        click.echo(f"Ungematchte Belege ({len(unmatched)}):")
+        click.echo("┌────┬────────────┬────────┬──────────────────┐")
+        click.echo("│ ID │ Datum      │ Betrag │ Händler          │")
+        click.echo("├────┼────────────┼────────┼──────────────────┤")
+        for row in unmatched:
+            d = str(row[1] or "")[:10]
+            a = f"{float(row[2] or 0):.2f}".rjust(7) if row[2] is not None else "    -  "
+            m = (row[3] or "")[:18].ljust(18)
+            click.echo(f"│ {row[0]:>2} │ {d:<10} │ {a} │ {m} │")
+        click.echo("└────┴────────────┴────────┴──────────────────┘")
+        click.echo("→ finanzhub inbox show <id> für Details")
+        click.echo("→ finanzhub inbox match <id> <tx_id> für manuelles Matching")
+
+
+@inbox.command("list", help="Belege auflisten.")
+@click.option("--status", default=None, help="Filter: pending|extracted|matched|no_match|error|manual_review")
+@click.option("--days", default=30, show_default=True, help="Zeitraum in Tagen.")
+@click.pass_context
+def inbox_list(ctx: click.Context, status: str | None, days: int) -> None:
+    """Belege als Tabelle ausgeben."""
+    from sqlalchemy import text
+
+    engine = build_engine()
+    where = ["received_at >= :cutoff"]
+    params: dict[str, Any] = {"cutoff": date.today().toordinal() - days}
+    if status:
+        where.append("status = :status")
+        params["status"] = status
+    sql = text(
+        "SELECT id, status, extracted_date, extracted_amount, "
+        "extracted_merchant, matched_transaction_id, match_confidence "
+        f"FROM receipts WHERE {' AND '.join(where)} "
+        "ORDER BY received_at DESC LIMIT 200"
+    )
+    with engine.begin() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    if not rows:
+        click.echo("Keine Belege gefunden.")
+        return
+    click.echo(
+        f"{'ID':>4}  {'Status':<14} {'Datum':<10} {'Betrag':>9}  Händler                       Match"
+    )
+    for row in rows:
+        d = str(row[2] or "")[:10]
+        a = f"{float(row[3] or 0):.2f} €" if row[3] is not None else "-"
+        m = (row[4] or "")[:30].ljust(30)
+        match = f"{row[5]} ({float(row[6] or 0):.0%})" if row[5] else "-"
+        click.echo(f"{row[0]:>4}  {row[1]:<14} {d:<10} {a:>9}  {m}  {match}")
+
+
+@inbox.command("show", help="Details zu einem Beleg.")
+@click.argument("receipt_id", type=int)
+@click.pass_context
+def inbox_show(ctx: click.Context, receipt_id: int) -> None:
+    """Zeigt alle Spalten + Tags eines Belegs."""
+    from sqlalchemy import text
+
+    engine = build_engine()
+    with engine.begin() as conn:
+        row = conn.execute(
+            text("SELECT * FROM receipts WHERE id = :id"), {"id": receipt_id}
+        ).fetchone()
+    if not row:
+        click.echo(f"Beleg #{receipt_id} nicht gefunden", err=True)
+        sys.exit(1)
+    rec = dict(row._mapping)
+    for k, v in rec.items():
+        if v is None:
+            continue
+        click.echo(f"  {k}: {v}")
+
+
+@inbox.command("match", help="Manuelles Matching: Beleg <id> ↔ Transaktion <tx_id>.")
+@click.argument("receipt_id", type=int)
+@click.argument("transaction_id")
+@click.pass_context
+def inbox_match(ctx: click.Context, receipt_id: int, transaction_id: str) -> None:
+    """Setzt matched_transaction_id manuell."""
+    from datetime import datetime, timezone
+
+    from sqlalchemy import text
+
+    engine = build_engine()
+    with engine.begin() as conn:
+        result = conn.execute(
+            text(
+                "UPDATE receipts SET matched_transaction_id = :tx, "
+                "match_method = 'manual', match_confidence = 1.0, "
+                "status = 'matched', matched_at = :ts "
+                "WHERE id = :id"
+            ),
+            {"tx": transaction_id, "ts": datetime.now(timezone.utc), "id": receipt_id},
+        )
+    if (result.rowcount or 0) == 0:
+        click.echo(f"Beleg #{receipt_id} nicht gefunden", err=True)
+        sys.exit(1)
+    click.echo(f"✅ Beleg #{receipt_id} ↔ Transaktion {transaction_id}")
+
+
+@inbox.command("tag", help="Tag setzen (z. B. 'steuerrelevant').")
+@click.argument("receipt_id", type=int)
+@click.argument("tag")
+@click.pass_context
+def inbox_tag(ctx: click.Context, receipt_id: int, tag: str) -> None:
+    """Setzt ein Tag (INSERT ... ON CONFLICT DO NOTHING)."""
+    from sqlalchemy import text
+
+    from app.data.db import insert_or_ignore
+
+    engine = build_engine()
+    try:
+        insert_or_ignore(engine, "receipt_tags", ("receipt_id", "tag"),
+                         {"receipt_id": receipt_id, "tag": tag})
+        # Bonus: 'steuerrelevant' spiegelt sich in der Haupttabelle
+        if tag == "steuerrelevant":
+            with engine.begin() as conn:
+                conn.execute(
+                    text("UPDATE receipts SET steuerrelevant = 1 WHERE id = :id"),
+                    {"id": receipt_id},
+                )
+        click.echo(f"✅ Tag '{tag}' auf Beleg #{receipt_id} gesetzt")
+    except Exception as err:
+        click.echo(f"Fehler: {err}", err=True)
+        sys.exit(1)
+
+
+@inbox.command("export", help="Belege als CSV exportieren.")
+@click.option("--year", type=int, default=None, help="Filter auf Buchungsjahr.")
+@click.option("--output", type=click.Path(), default="receipts.csv", show_default=True)
+@click.pass_context
+def inbox_export(ctx: click.Context, year: int | None, output: str) -> None:
+    """CSV-Export mit allen extrahierten Feldern."""
+    import csv
+
+    from sqlalchemy import text
+
+    engine = build_engine()
+    where = ["1=1"]
+    params: dict[str, Any] = {}
+    if year:
+        where.append("strftime('%Y', extracted_date) = :y")
+        params["y"] = str(year)
+    sql = text(
+        "SELECT * FROM receipts WHERE " + " AND ".join(where) + " ORDER BY received_at DESC"
+    )
+    with engine.begin() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    if not rows:
+        click.echo("Keine Belege für den Filter.")
+        return
+    fields = list(rows[0]._mapping.keys())
+    with open(output, "w", newline="", encoding="utf-8") as fh:
+        writer = csv.writer(fh)
+        writer.writerow(fields)
+        for row in rows:
+            writer.writerow([row._mapping[f] for f in fields])
+    click.echo(f"✅ {len(rows)} Belege nach {output} exportiert")
+
+
+@inbox.command("test-extraction", help="Testet KI-Extraktion (ohne DB-Schreiben).")
+@click.argument("file_path", type=click.Path(exists=True))
+@click.pass_context
+def inbox_test_extraction(ctx: click.Context, file_path: str) -> None:
+    """Nur Extraktion, kein DB-/Mail-Effekt."""
+    from pathlib import Path
+
+    from app.config_loader import load_inbox
+    from app.inbox.inbox_engine import InboxEngine
+
+    config_dir = ctx.obj["config_dir"]
+    cfg = load_inbox(config_dir)
+    engine = build_engine()
+    inbox_engine = InboxEngine(cfg, engine)
+    try:
+        result = inbox_engine.test_extraction(Path(file_path))
+    except Exception as err:
+        click.echo(f"Extraktion fehlgeschlagen: {err}", err=True)
+        sys.exit(1)
+    click.echo(f"Datum:        {result.date or '-'}")
+    click.echo(f"Betrag:       {result.amount if result.amount is not None else '-'} {result.currency}")
+    click.echo(f"Händler:      {result.merchant or '-'}")
+    click.echo(f"Kategorie:    {result.category or '-'}")
+    click.echo(f"Rechnung:     {result.is_invoice}")
+    click.echo(f"Zahlungsbeleg:{result.is_payment_proof}")
+    click.echo(f"MwSt:         {result.tax_amount if result.tax_amount is not None else '-'}")
+    click.echo(f"Rechnungsnr.: {result.invoice_number or '-'}")
+    click.echo(f"Konfidenz:    {result.confidence:.0%}")
+    click.echo(f"Modell:       {result.model or '-'}")
+
+
 if __name__ == "__main__":
     main(obj={})

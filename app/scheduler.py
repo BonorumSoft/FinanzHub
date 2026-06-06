@@ -6,6 +6,12 @@ Drei Cron-Jobs:
 - monatlich 1., 09:00 UTC → :func:`run_monthly_cycle`
 - quartalsweise 1.1./1.4./1.7./1.10., 07:00 UTC → :func:`run_quarterly_cycle`
 
+Optional:
+
+- Inbox-Polling: Interval-Job mit ``poll_interval_seconds`` aus
+  ``inbox.yaml``. Wird automatisch registriert, wenn ``inbox_poll``
+  als Callable übergeben wird.
+
 Die Cycles sind Platzhalter — die konkreten Aufrufe (Pull/Events/Notify)
 werden beim Scheduler-Start in :mod:`app.main` registriert.
 """
@@ -13,9 +19,11 @@ werden beim Scheduler-Start in :mod:`app.main` registriert.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 from app.logger import get_logger
 
@@ -26,8 +34,18 @@ def build_scheduler(
     daily: Callable[[], None],
     monthly: Callable[[], None],
     quarterly: Callable[[], None],
+    inbox_poll: Callable[[], Any] | None = None,
+    inbox_poll_seconds: int = 60,
 ) -> BlockingScheduler:
-    """Erzeugt einen BlockingScheduler mit den drei Standard-Cron-Jobs."""
+    """Erzeugt einen BlockingScheduler mit den drei Standard-Cron-Jobs.
+
+    Args:
+        daily: Tageszyklus-Callable.
+        monthly: Monatszyklus-Callable.
+        quarterly: Quartalszyklus-Callable.
+        inbox_poll: Optionaler Callable für Beleg-Inbox (z. B. ``InboxEngine.process_inbox``).
+        inbox_poll_seconds: Polling-Intervall in Sekunden (default 60).
+    """
     scheduler = BlockingScheduler(timezone="UTC")
     scheduler.add_job(
         daily,
@@ -50,7 +68,23 @@ def build_scheduler(
         name="Quartalsweiser Report-Zyklus",
         replace_existing=True,
     )
-    logger.info("Scheduler mit 3 Cron-Jobs konfiguriert")
+
+    if inbox_poll is not None:
+        scheduler.add_job(
+            inbox_poll,
+            IntervalTrigger(seconds=max(10, int(inbox_poll_seconds))),
+            id="inbox_poll",
+            name="Beleg-Inbox Polling",
+            replace_existing=True,
+            max_instances=1,  # kein paralleler Lauf
+            coalesce=True,
+        )
+        logger.info(
+            "Inbox-Poll registriert (alle %d Sekunden)", inbox_poll_seconds
+        )
+
+    logger.info("Scheduler konfiguriert (daily + monthly + quarterly%s)",
+                " + inbox" if inbox_poll else "")
     return scheduler
 
 

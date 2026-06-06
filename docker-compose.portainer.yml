@@ -1,0 +1,165 @@
+# =============================================================================
+# FinanzHub - Portainer Stack File
+# =============================================================================
+# Verwendung in Portainer:
+#   1. Stacks → Add stack
+#   2. Name: finanzhub
+#   3. Build method:
+#      a) "Web editor" → diesen Inhalt einfügen
+#      b) "Git repository" → Repo-URL angeben (siehe PORTAINER.md)
+#      c) "Upload" → diese Datei hochladen
+#   4. Environment variables anpassen (siehe .env.portainer.example)
+#   5. "Deploy the stack"
+#
+# WICHTIG: Vor dem ersten Start muss ein starkes DB-Passwort gesetzt werden!
+# Generiere eines mit: openssl rand -hex 16
+# =============================================================================
+
+services:
+  finanzhub:
+    # Image kann aus zwei Quellen kommen:
+    # 1. Aus dem lokalen Build-Kontext (z. B. wenn per Git hochgeladen)
+    # 2. Aus einer Registry (z. B. ghcr.io/bonorumsoft/finanzhub:latest)
+    #
+    # Für Portainer "Git repository" → build: context nutzen
+    # Für Portainer "Image" → image: nutzen
+    image: ${FINANZHUB_IMAGE:-ghcr.io/bonorumsoft/finanzhub:latest}
+    build:
+      context: https://github.com/bonorumsoft/finanzhub.git
+      dockerfile: Dockerfile
+    container_name: finanzhub
+    restart: unless-stopped
+
+    # Environment-Variablen
+    # Entweder via env_file (siehe unten) oder direkt hier setzen
+    environment:
+      # --- Datenbank (an postgres-Service anpassen oder externer Host) ---
+      DATABASE_URL: postgresql://finanzhub:${DB_PASSWORD}@postgres:5432/finanzhub
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: finanzhub
+      DB_USER: finanzhub
+      DB_PASSWORD: ${DB_PASSWORD:?Bitte DB_PASSWORD in den Env-Variablen setzen}
+
+      # --- App-Konfiguration ---
+      CONFIG_DIR: /app/config
+      OUTPUT_DIR: /app/output
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      TZ: ${TZ:-Europe/Berlin}
+
+      # --- Optional: Mail-Versand (SMTP) ---
+      # Diese Variablen werden von der App gelesen, falls gesetzt
+      # SMTP_HOST: ${SMTP_HOST:-}
+      # SMTP_PORT: ${SMTP_PORT:-587}
+      # SMTP_USER: ${SMTP_USER:-}
+      # SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      # SMTP_FROM: ${SMTP_FROM:-finanzhub@example.com}
+
+      # --- Optional: enable-banking (PSD2) ---
+      # ENABLE_BANKING_PSP_ID: ${ENABLE_BANKING_PSP_ID:-}
+      # ENABLE_BANKING_KEY_PATH: /secrets/ebanking.pem
+
+    # Persistente Daten (Konfiguration + Logs + Reports)
+    # Diese Volumes MÜSSEN in Portainer als "bind mount" oder
+    # benannte Volumes angelegt werden. Standard: benannte Volumes
+    volumes:
+      - finanzhub_config:/app/config
+      - finanzhub_output:/app/output
+      - finanzhub_logs:/app/logs
+
+    # Secrets: z. B. enable-banking-Privatschlüssel
+    # In Portainer: Stacks → "Secret" hinzufügen, dann hier referenzieren
+    # secrets:
+    #   - ebanking_key
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - finanzhub_net
+
+    # Health-Check: Portainer zeigt Status (healthy/unhealthy)
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os; from sqlalchemy import create_engine, text; e=create_engine(os.environ['DATABASE_URL']); e.connect().execute(text('SELECT 1'))\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+    # Logging-Limits (verhindert volle Disk)
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Bei Verwendung von benutzerdefinierten Secrets:
+    # secrets:
+    #   - ebanking_key
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: finanzhub_db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: finanzhub
+      POSTGRES_USER: finanzhub
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Bitte DB_PASSWORD in den Env-Variablen setzen}
+      # PGDATA explizit setzen, damit es mit named volumes kompatibel bleibt
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    # Persistenter DB-Dump wird mit pg_dump erstellt (siehe Backup-Strategie)
+
+    networks:
+      - finanzhub_net
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Postgres muss nicht von außen erreichbar sein.
+    # Falls doch nötig (z. B. lokales pgAdmin), auskommentieren:
+    # ports:
+    #   - "5432:5432"
+
+# =============================================================================
+# Volumes (benannt) — werden in Portainer automatisch erstellt
+# =============================================================================
+volumes:
+  postgres_data:
+    name: finanzhub_postgres_data
+  finanzhub_config:
+    name: finanzhub_config
+  finanzhub_output:
+    name: finanzhub_output
+  finanzhub_logs:
+    name: finanzhub_logs
+
+# =============================================================================
+# Netzwerk
+# =============================================================================
+networks:
+  finanzhub_net:
+    name: finanzhub_net
+    driver: bridge
+
+# =============================================================================
+# Secrets (Beispiel — in Portainer unter "Secrets" anlegen)
+# =============================================================================
+# secrets:
+#   ebanking_key:
+#     file: ./secrets/ebanking.pem   # nur lokal — besser via Portainer UI

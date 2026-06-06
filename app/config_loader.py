@@ -66,6 +66,91 @@ class AppSettings(_StrictModel):
 
 
 # ---------------------------------------------------------------------------
+# inbox.yaml
+# ---------------------------------------------------------------------------
+
+
+class InboxIMAPConfig(_StrictModel):
+    host: str = "imap.gmail.com"
+    port: int = 993
+    use_ssl: bool = True
+    username: str = ""
+    password: str = ""
+    folder: str = "INBOX"
+    poll_interval_seconds: int = 60
+    mark_as_read: bool = True
+    move_to_folder: str = "Belege/Verarbeitet"
+
+
+class LMStudioExtractionConfig(_StrictModel):
+    base_url: str = "http://localhost:1234/v1"
+    model: str = "qwen2.5-vl-7b-instruct"
+    timeout_seconds: int = 30
+
+
+class OllamaExtractionConfig(_StrictModel):
+    base_url: str = "http://localhost:11434"
+    model: str = "llava:13b"
+    timeout_seconds: int = 45
+
+
+class OpenAIExtractionConfig(_StrictModel):
+    api_key: str = ""
+    model: str = "gpt-4o-mini"
+    timeout_seconds: int = 20
+
+
+class AnthropicExtractionConfig(_StrictModel):
+    api_key: str = ""
+    model: str = "claude-haiku-4-5-20251001"
+    timeout_seconds: int = 20
+
+
+class ExtractionConfig(_StrictModel):
+    provider: str = "local_lm_studio"
+    local_lm_studio: LMStudioExtractionConfig = Field(default_factory=LMStudioExtractionConfig)
+    ollama: OllamaExtractionConfig = Field(default_factory=OllamaExtractionConfig)
+    openai: OpenAIExtractionConfig = Field(default_factory=OpenAIExtractionConfig)
+    anthropic: AnthropicExtractionConfig = Field(default_factory=AnthropicExtractionConfig)
+    fallback_provider: str = "anthropic"
+    min_confidence_for_match: float = 0.75
+
+
+class InboxMatchingConfig(_StrictModel):
+    date_tolerance_days: int = 3
+    amount_tolerance_eur: float = 0.50
+    amount_tolerance_percent: float = 0.02
+    lookback_days: int = 14
+
+
+class InboxConfirmationConfig(_StrictModel):
+    enabled: bool = True
+    reply_to_sender: bool = True
+    include_match_details: bool = True
+    include_extracted_data: bool = True
+
+
+class InboxConfig(_StrictModel):
+    enabled: bool = False
+    imap: InboxIMAPConfig = Field(default_factory=InboxIMAPConfig)
+    allowed_senders: list[str] = Field(default_factory=list)
+    accepted_mimetypes: list[str] = Field(
+        default_factory=lambda: [
+            "image/jpeg",
+            "image/png",
+            "image/heic",
+            "image/heif",
+            "image/webp",
+            "application/pdf",
+        ]
+    )
+    storage_path: str = "/app/output/receipts"
+    extraction: ExtractionConfig = Field(default_factory=ExtractionConfig)
+    matching: InboxMatchingConfig = Field(default_factory=InboxMatchingConfig)
+    confirmation: InboxConfirmationConfig = Field(default_factory=InboxConfirmationConfig)
+
+
+# ---------------------------------------------------------------------------
 # assets.yaml
 # ---------------------------------------------------------------------------
 
@@ -361,6 +446,14 @@ def load_income(config_dir: str | os.PathLike[str] | None = None) -> IncomeConfi
     )
 
 
+def load_inbox(config_dir: str | os.PathLike[str] | None = None) -> InboxConfig:
+    return _validate(
+        InboxConfig,
+        _read_yaml(Path(config_dir or DEFAULT_CONFIG_DIR) / "inbox.yaml"),
+        "inbox.yaml",
+    )
+
+
 def load_all(config_dir: str | os.PathLike[str] | None = None) -> dict[str, BaseModel]:
     """Lädt alle Konfigurationen in einem Rutsch."""
     base = Path(config_dir or os.environ.get("CONFIG_DIR", DEFAULT_CONFIG_DIR))
@@ -372,11 +465,21 @@ def load_all(config_dir: str | os.PathLike[str] | None = None) -> dict[str, Base
         "mail": load_mail(base),
         "notifications": load_notifications(base),
         "income": load_income(base),
+        "inbox": load_inbox(base),
     }
 
 
 __all__ = [
+    "AnthropicExtractionConfig",
     "AppSettings",
+    "ExtractionConfig",
+    "InboxConfig",
+    "InboxConfirmationConfig",
+    "InboxIMAPConfig",
+    "InboxMatchingConfig",
+    "LMStudioExtractionConfig",
+    "OllamaExtractionConfig",
+    "OpenAIExtractionConfig",
     "AssetsConfig",
     "BankAdapterConfig",
     "BanksConfig",
