@@ -298,6 +298,22 @@ Nach Config-Änderungen immer:
 finanzhub notify test daily_wealth_report
 ```
 
+### 4.6 Beleg-Inbox (täglich)
+
+Wer den Inbox-Polling aktiviert hat, braucht **keinen** manuellen Workflow — der Scheduler pollt alle 60 s. Trotzdem zur Kontrolle:
+
+```bash
+finanzhub inbox status           # Übersicht (sollte meist 0 ungematcht sein)
+finanzhub inbox list --status error   # Fehler prüfen
+```
+
+Bei vielen manuellen Käufen (z. B. nach dem Wocheneinkauf):
+
+```bash
+# Alle 5 Belege manuell triggern
+finanzhub inbox run
+```
+
 ---
 
 ## 5. Wöchentliche Workflows
@@ -786,6 +802,51 @@ finanzhub pull-all --force-price-refresh
 2. In-App-Hilfe: `finanzhub <command> --help`
 3. GitHub Issues: [github.com/bonorumsoft/finanzhub/issues](https://github.com/bonorumsoft/finanzhub/issues)
 4. Logs: `output/logs/finanzhub.log`
+
+---
+
+### 3.1.5 Inbox-Kommandos (Beleg-Verarbeitung)
+
+| Befehl                                            | Zweck                                      |
+| ------------------------------------------------- | ------------------------------------------- |
+| `finanzhub inbox run`                             | Inbox einmal verarbeiten                   |
+| `finanzhub inbox status [--days 90]`              | Übersicht + ungematchte Belege              |
+| `finanzhub inbox list [--status X]`               | Belege tabellarisch                         |
+| `finanzhub inbox show <id>`                       | Details zu einem Beleg                     |
+| `finanzhub inbox match <id> <tx_id>`              | Manuelles Matching                          |
+| `finanzhub inbox tag <id> <tag>`                  | Tag setzen (z. B. `steuerrelevant`)         |
+| `finanzhub inbox export [--year 2026]`            | CSV-Export für Steuererklärung              |
+| `finanzhub inbox test-extraction <image_or_pdf>`  | KI-Extraktion testen (ohne DB-Effekt)       |
+
+**Beispiel-Workflow:**
+
+```bash
+# Nach Einkauf mit dem Smartphone ein Foto machen → an belege@… senden
+# (Scheduler pollt alle 60 s automatisch, oder manuell triggern)
+finanzhub inbox run
+# → Mails: 1, verarbeitet: 1, extrahiert: 1, gematched: 1, fehler: 0
+
+finanzhub inbox status
+# → Ungematchte Belege (1):
+# → ┌────┬────────────┬────────┬──────────────┐
+# → │ ID │ Datum      │ Betrag │ Händler      │
+# → │ 23 │ 2026-06-04 │  47,90 │ MediaMarkt   │
+# → └────┴────────────┴────────┴──────────────┘
+
+# Manuelles Matching (KI hat die TX nicht gefunden)
+finanzhub inbox match 23 TX-2026-06-04-001
+# → ✅ Beleg #23 ↔ Transaktion TX-2026-06-04-001
+
+# Steuerlich markieren für die nächste Erklärung
+finanzhub inbox tag 23 steuerrelevant
+# → ✅ Tag 'steuerrelevant' auf Beleg #23 gesetzt
+
+# Export für den Steuerberater
+finanzhub inbox export --year 2026 --output steuer-2026.csv
+# → ✅ 142 Belege nach steuer-2026.csv exportiert
+```
+
+Ausführliche Doku: [INBOX.md](INBOX.md).
 
 ---
 

@@ -9,6 +9,7 @@ Willkommen in der FinanzHub-Dokumentation. Diese ist in **vier Dokumente** gegli
 | **[INTEGRATION.md](INTEGRATION.md)**        | Administrator/DevOps| Banken, SMTP, Datenbank, Scheduler, Sicherheit     |
 | **[USAGE.md](USAGE.md)**                    | Endbenutzer          | CLI-Referenz, Workflows, Rezepte, Fehlerbehebung    |
 | **[PORTAINER.md](PORTAINER.md)**            | Portainer-Admins     | Deployment via Portainer, Backups, Updates          |
+| **[INBOX.md](INBOX.md)**                    | Alle                 | Beleg-Inbox: KI-Extraktion, Provider, Workflows     |
 
 ---
 
@@ -33,6 +34,14 @@ Willkommen in der FinanzHub-Dokumentation. Diese ist in **vier Dokumente** gegli
 ### „Ich will meine Immobilien-Equity tracken"
 
 → [USAGE.md §4-6](USAGE.md#4-tägliche-workflows) und [INTEGRATION.md §2](INTEGRATION.md#2-bank-integrationen).
+
+### „Ich will Kassenbons automatisch verarbeiten"
+
+→ **[INBOX.md](INBOX.md)** — vollständige Anleitung für die Beleg-Inbox mit KI-Extraktion.
+
+### „Ich will die KI zur Beleg-Extraktion lokal betreiben"
+
+→ [INBOX.md §4](INBOX.md#4-ki-provider-wählen) — LM Studio, Ollama, OpenAI, Anthropic im Vergleich.
 
 ---
 

@@ -66,15 +66,20 @@ Wähle eine von drei Build-Methoden:
 
 Im Stack-Editor unter **Environment variables** > **Advanced mode**:
 
-| Variable       | Wert                                   | Pflicht |
-| -------------- | -------------------------------------- | ------- |
-| `DB_PASSWORD`  | `<openssl rand -hex 16>` (32 Zeichen)  | **ja**  |
-| `TZ`           | `Europe/Berlin`                        | nein    |
-| `LOG_LEVEL`    | `INFO`                                 | nein    |
-| `SMTP_HOST`    | `smtp.gmail.com`                       | nein    |
-| `SMTP_PORT`    | `587`                                  | nein    |
-| `SMTP_USER`    | `finanzhub@example.com`                | nein    |
-| `SMTP_PASSWORD`| `<app-passwort>`                       | nein    |
+| Variable           | Wert                                   | Pflicht |
+| ------------------ | -------------------------------------- | ------- |
+| `DB_PASSWORD`      | `<openssl rand -hex 16>` (32 Zeichen)  | **ja**  |
+| `TZ`               | `Europe/Berlin`                        | nein    |
+| `LOG_LEVEL`        | `INFO`                                 | nein    |
+| `SMTP_HOST`        | `smtp.gmail.com`                       | nein    |
+| `SMTP_PORT`        | `587`                                  | nein    |
+| `SMTP_USER`        | `finanzhub@example.com`                | nein    |
+| `SMTP_PASSWORD`    | `<app-passwort>`                       | nein    |
+| `INBOX_IMAP_USER`  | `belege@example.com`                   | nein (für Inbox) |
+| `INBOX_IMAP_PASS`  | `<app-passwort>`                       | nein (für Inbox) |
+| `OPENAI_API_KEY`   | `sk-...`                               | nein (Cloud-Provider) |
+| `ANTHROPIC_API_KEY`| `sk-ant-...`                           | nein (Cloud-Fallback) |
+| `INBOX_SMTP_HOST`  | `smtp.gmail.com`                       | nein (Bestätigungs-Mail) |
 
 > **Wichtig:** `DB_PASSWORD` MUSS gesetzt sein, sonst startet der Container nicht!
 
@@ -112,6 +117,18 @@ finanzhub wealth            # Vermögen anzeigen
 ```
 
 Damit ist FinanzHub betriebsbereit. Die Cron-Jobs laufen automatisch im Hintergrund.
+
+### Beleg-Inbox (optional)
+
+Wenn `inbox.enabled: true` in `config/inbox.yaml` gesetzt ist, pollt der Scheduler automatisch alle 60 s die konfigurierte IMAP-Inbox:
+
+```bash
+# In Container-Console
+finanzhub inbox status
+finanzhub inbox run         # manuell triggern
+```
+
+Vollständige Doku: **[INBOX.md](INBOX.md)** — KI-Provider-Konfiguration, LM Studio-Setup, Sicherheits-Hinweise.
 
 ---
 

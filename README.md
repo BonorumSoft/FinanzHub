@@ -49,8 +49,30 @@ Für tiefergehende Informationen siehe die Dokumentation im `docs/`-Verzeichnis:
 | `substance_monitor`      | Substanz­verzehr, konsekutive monatliche Vermögens­rückgänge              |
 | `event_detector`         | 14+ Ereignistypen, dedupliziert, append-only                              |
 | `notification_engine`    | Geplante Reports, HTML/Text-Templates, Mailversand mit Retry              |
-| `scheduler`              | APScheduler mit Cron-Jobs (Tages­abschluss, Monats­report, …)             |
-| `cli`                    | 15+ Click-Kommandos für manuelle Workflows                                |
+| `scheduler`              | APScheduler mit Cron-Jobs (Tages­abschluss, Monats­report, Inbox-Polling)|
+| `cli`                    | 20+ Click-Kommandos für manuelle Workflows                                |
+| **`inbox/`**             | **Beleg-Inbox: IMAP-Polling, Bild→PDF, KI-Extraktion, Bank-Matching**    |
+
+### Beleg-Inbox (Kassenbons automatisch verarbeiten)
+
+Das **Beleg-Inbox-Feature** ([vollständige Doku](docs/INBOX.md)) verarbeitet automatisch Kassenbons und Rechnungen, die per E-Mail an eine Inbox-Adresse geschickt werden:
+
+1. **Foto machen** (Kassenbon) oder **PDF öffnen** (Rechnung)
+2. An `belege@deinedomain.de` schicken
+3. System macht den Rest:
+   - Bild → PDF-Konvertierung (JPEG/PNG/HEIC)
+   - KI-gestützte Extraktion: Datum, Betrag, Händler, Kategorie
+   - Matching gegen vorhandene Banktransaktionen
+   - Speicherung in DB mit Konfidenz-Score
+   - Bestätigung per E-Mail
+
+Unterstützte KI-Provider: **LM Studio** (lokal, default), **Ollama**, **OpenAI**, **Anthropic**.
+
+```bash
+finanzhub inbox run           # einmal verarbeiten
+finanzhub inbox status         # Übersicht
+finanzhub inbox match 23 TX-1  # manuelles Matching
+```
 
 ---
 

@@ -700,7 +700,126 @@ alerts:
 
 ---
 
-## 9. Sicherheits­hinweise
+## 9. Beleg-Inbox (IMAP + KI)
+
+Die Beleg-Inbox kombiniert mehrere externe Integrationen in einem Workflow. Sie ist in [INBOX.md](INBOX.md) ausführlich dokumentiert; hier nur die wichtigsten Integrations­aspekte.
+
+### 9.1 IMAP-Anbindung
+
+| Provider  | Host                       | Port | Besonderheit                                  |
+| --------- | -------------------------- | ---- | --------------------------------------------- |
+| Gmail     | `imap.gmail.com`           | 993  | **App-Passwort** erforderlich (2FA + App-Passwörter) |
+| Outlook   | `outlook.office365.com`    | 993  | OAuth2 empfohlen (Phase 14)                   |
+| GMX       | `imap.gmx.net`             | 993  | Standard PLAIN                                |
+| Mailbox.org | `imap.mailbox.org`        | 993  | Privacy-fokussiert, deutsche Anbieter         |
+| Posteo    | `posteo.de`                | 993  | Privacy-fokussiert, deutsche Anbieter         |
+| self-hosted | `mail.deinedomain.de`    | 993  | STARTTLS + Let's Encrypt                      |
+
+Konfiguration: [`config/inbox.yaml`](../config.example/inbox.yaml):
+
+```yaml
+inbox:
+  enabled: true
+  imap:
+    host: "imap.gmail.com"
+    port: 993
+    use_ssl: true
+    username: ""            # aus .env: INBOX_IMAP_USER
+    password: ""            # aus .env: INBOX_IMAP_PASS
+    folder: "INBOX"
+    poll_interval_seconds: 60
+    move_to_folder: "Belege/Verarbeitet"   # nach Verarbeitung verschieben
+  allowed_senders:                          # PFLICHT
+    - "tjorben@example.com"
+```
+
+### 9.2 KI-Provider (Multimodal-Pflicht)
+
+| Provider       | Endpunkt                        | Auth             | Datenschutz     |
+| -------------- | ------------------------------- | ---------------- | --------------- |
+| **LM Studio**  | `http://host:1234/v1`           | (keine)          | ✅ 100 % lokal  |
+| **Ollama**     | `http://host:11434`             | (keine)          | ✅ 100 % lokal  |
+| OpenAI         | `https://api.openai.com/v1`     | Bearer-Token     | ⚠️ Cloud (USA)  |
+| Anthropic      | `https://api.anthropic.com/v1`  | `x-api-key`      | ⚠️ Cloud (USA)  |
+
+Das konfigurierte Modell **muss multimodal** sein (Bildverständnis). Erkannt werden Namen mit `vl`, `vision`, `llava`, `4o`, `haiku`, `opus`, `sonnet`. Sonst WARNING beim Start.
+
+### 9.3 Bild-Konvertierung (HEIC, JPEG, PNG → PDF)
+
+| Format  | Bibliothek                  | Hinweis                                |
+| ------- | --------------------------- | -------------------------------------- |
+| JPEG    | `img2pdf`                   | direkt                                 |
+| PNG     | `img2pdf`                   | direkt                                 |
+| WEBP    | `img2pdf`                   | direkt                                 |
+| HEIC    | `pillow-heif` → `PIL` → JPEG → `img2pdf` | iPhone-Fotos                 |
+| HEIF    | `pillow-heif` → `PIL` → JPEG → `img2pdf` | iPhone-Fotos                 |
+
+EXIF-Rotation wird via `PIL.ImageOps.exif_transpose()` normalisiert (Smartphone-Fotos).
+
+### 9.4 PDF→Bild für Vision-APIs
+
+`pdf2image` (Wrapper um Poppler) — **Poppler muss installiert sein**:
+
+```bash
+# Debian/Ubuntu
+sudo apt install poppler-utils
+# macOS
+brew install poppler
+# Alpine (Docker)
+apk add poppler
+```
+
+Auflösung: 200 DPI (ausreichend für Textlesung, sparsam bei API-Kosten).
+
+### 9.5 SMTP für Bestätigungsmails
+
+Verwendet `INBOX_SMTP_*` env-Variablen, fallback auf `SMTP_*`:
+
+| Var                | Zweck                         |
+| ------------------ | ----------------------------- |
+| `INBOX_SMTP_HOST`  | SMTP-Server (z. B. smtp.gmail.com) |
+| `INBOX_SMTP_PORT`  | 587 (STARTTLS) oder 465 (TLS) |
+| `INBOX_SMTP_USER`  | SMTP-Username                 |
+| `INBOX_SMTP_PASS`  | SMTP-Passwort (App-Passwort!) |
+| `INBOX_SMTP_FROM`  | `From`-Adresse                |
+
+Falls keine SMTP konfiguriert: Bestätigung wird **übersprungen** (kein Fehler).
+
+### 9.6 Storage
+
+| Pfad                          | Inhalt                                 |
+| ----------------------------- | -------------------------------------- |
+| `/app/output/receipts/*.pdf`  | Konvertierte/gespeicherte Belege       |
+| `receipts`-Tabelle            | Metadaten + extrahierte Daten          |
+| `receipt_tags`-Tabelle        | Manuell gesetzte Tags                  |
+
+Modus `0700` auf dem Storage-Pfad empfohlen:
+
+```bash
+chmod 700 /app/output/receipts
+```
+
+### 9.7 Vollständiges Beispiel (docker-compose)
+
+```yaml
+services:
+  finanzhub:
+    image: finanzhub:latest
+    environment:
+      # Inbox
+      INBOX_IMAP_USER: ${INBOX_USER}
+      INBOX_IMAP_PASS: ${INBOX_PASS}
+      # Cloud-Provider (optional)
+      OPENAI_API_KEY: ${OPENAI_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_KEY}
+    volumes:
+      - ./receipts:/app/output/receipts      # persistent
+      - ./config:/app/config:ro
+```
+
+---
+
+## 10. Sicherheits­hinweise
 
 ### 9.1 Secret-Management
 

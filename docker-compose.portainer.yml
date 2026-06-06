@@ -59,6 +59,17 @@ services:
       # ENABLE_BANKING_PSP_ID: ${ENABLE_BANKING_PSP_ID:-}
       # ENABLE_BANKING_KEY_PATH: /secrets/ebanking.pem
 
+      # --- Optional: Beleg-Inbox (IMAP + KI) ---
+      # INBOX_IMAP_USER: ${INBOX_IMAP_USER:-}
+      # INBOX_IMAP_PASS: ${INBOX_IMAP_PASS:-}
+      # OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # INBOX_SMTP_HOST: ${INBOX_SMTP_HOST:-}
+      # INBOX_SMTP_PORT: ${INBOX_SMTP_PORT:-587}
+      # INBOX_SMTP_USER: ${INBOX_SMTP_USER:-}
+      # INBOX_SMTP_PASS: ${INBOX_SMTP_PASS:-}
+      # INBOX_SMTP_FROM: ${INBOX_SMTP_FROM:-}
+
     # Persistente Daten (Konfiguration + Logs + Reports)
     # Diese Volumes MÜSSEN in Portainer als "bind mount" oder
     # benannte Volumes angelegt werden. Standard: benannte Volumes

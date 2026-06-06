@@ -84,13 +84,16 @@ Diese Regeln sind **nicht** nur Konvention — sie werden vom `pyproject.toml` (
 
 | Layer             | Darf importieren                                               | Darf NICHT importieren                        |
 | ----------------- | -------------------------------------------------------------- | ---------------------------------------------- |
-| `app/banking/`    | `base`, `core/`-Datentypen, `config_loader`, `logger`         | `app/data/`, `app/notifications/`, `app/alerts/` |
-| `app/data/`       | `banking/`, `core/`, `config_loader`, `logger`                 | `app/notifications/`, `app/alerts/`, `app/main.py` |
-| `app/core/`       | `config_loader`, `logger`, `datetime`/Standard-Lib            | `app/banking/`, `app/data/`, `app/notifications/`, `app/alerts/` |
-| `app/alerts/`     | `core/`, `data/db` (nur lesend), `config_loader`, `logger`     | `app/banking/`, `app/notifications/`           |
-| `app/notifications/` | `core/`, `data/`, `config_loader`, `logger`, `templates`     | `app/banking/`, `app/alerts/`                  |
+| `app/banking/`    | `base`, `core/`-Datentypen, `config_loader`, `logger`         | `app/data/`, `app/notifications/`, `app/alerts/`, `app/inbox/` |
+| `app/data/`       | `banking/`, `core/`, `config_loader`, `logger`                 | `app/notifications/`, `app/alerts/`, `app/inbox/`, `app/main.py` |
+| `app/core/`       | `config_loader`, `logger`, `datetime`/Standard-Lib            | `app/banking/`, `app/data/`, `app/notifications/`, `app/alerts/`, `app/inbox/` |
+| `app/alerts/`     | `core/`, `data/db` (nur lesend), `config_loader`, `logger`     | `app/banking/`, `app/notifications/`, `app/inbox/` |
+| `app/notifications/` | `core/`, `data/`, `config_loader`, `logger`, `templates`     | `app/banking/`, `app/alerts/`, `app/inbox/`   |
+| `app/inbox/`      | `core/`, `data/db` (lesend + schreibend), `config_loader`, `logger` | `app/banking/`, `app/alerts/`, `app/notifications/` |
 | `app/cli.py`      | alles                                                          | —                                             |
 | `app/main.py`     | alles (einziger Ort für Scheduler-Instanziierung)              | —                                             |
+
+> **Hinweis `app/inbox/`:** Die Inbox-Schicht darf `data/db` schreibend nutzen (für `receipts` + `receipt_tags`), aber **keine** Bank-Adapter direkt kennen. Das Bank-Matching erfolgt über SQL-Lesen von `transactions` (in `transaction_matcher.py`), nicht durch Import der `banking/`-Adapter.
 
 ### 2.2 Globale Konstanten vermeiden
 
@@ -505,6 +508,31 @@ Verwendet `Click 8.x` mit folgenden Konventionen:
 - Startet APScheduler mit konfigurierten Cron-Jobs
 - Signal-Handler: `SIGTERM` → `scheduler.shutdown(wait=False)`, dann `engine.dispose()`
 
+### 4.8 `app/inbox/` — Beleg-Inbox
+
+Verarbeitet eingehende E-Mails, extrahiert Kassenbon-Daten via KI und matcht sie gegen Banktransaktionen. Module:
+
+| Datei                       | Verantwortung                                            |
+| --------------------------- | --------------------------------------------------------- |
+| `mail_fetcher.py`           | IMAP-Polling, Whitelist, MIME-Filter, Header-Parsing     |
+| `image_converter.py`        | JPEG/PNG/WEBP/HEIC → PDF (via `img2pdf` + `pillow-heif`) |
+| `receipt_extractor.py`      | LM Studio / Ollama / OpenAI / Anthropic — JSON-Extraktion |
+| `transaction_matcher.py`    | 5-stufiges Scoring (Datum ±3d, Betrag, Händler, …)       |
+| `attachment_handler.py`     | Routing: Original speichern, konvertiertes PDF, Hash     |
+| `inbox_engine.py`           | Orchestrator mit State-Machine (pending → extracted → matched) |
+
+**Wichtige Designentscheidungen:**
+
+- **Provider-Fallback-Kette**: `lmstudio → anthropic → openai` (lokal → Cloud) — siehe `receipt_extractor._build_provider_chain()`
+- **Validierung der KI-Antwort**: Betrag wird auf 0–100.000 € geclampt, Datum darf nicht in der Zukunft liegen, Konfidenz auf 0.0–1.0 normalisiert
+- **Defensive Whitelist**: `inbox_engine` prüft Whitelist UNABHÄNGIG vom `mail_fetcher` (doppelt-geprüft, da Tests den Fetcher mocken)
+- **Original zuerst**: Anhang wird **immer** im Original-Format gespeichert, **bevor** KI-Extraktion stattfindet — bei Fehler in der KI ist das Original audit-fähig
+- **Multimodal-Pflicht**: `receipt_extractor.__init__` warnt, wenn der Modell-Name nicht auf `vl`/`vision`/`llava`/`4o`/`haiku`/`opus`/`sonnet` matcht
+- **DB-Schema**: zwei Tabellen (`receipts`, `receipt_tags`) mit 4 Indizes; siehe `migrations/005_add_receipts.sql`
+- **Scheduler-Integration**: `build_scheduler(inbox_poll=True, inbox_poll_seconds=60)` registriert Job mit `IntervalTrigger`, `max_instances=1`, `coalesce=True` — keine Doppel-Polling bei Überlappung
+
+**Tests:** 53 neue Tests (5 Dateien in `tests/unit/` + `tests/integration/test_inbox_engine.py`). Detail-Doku: [INBOX.md](INBOX.md).
+
 ---
 
 ## 5. FinanzHub erweitern
@@ -721,6 +749,32 @@ notifications:
 
 Cron-Syntax: 5 Felder (`min hour day month weekday`), Zeitzone via `TZ` env.
 
+### 5.6 Neuen KI-Provider für die Inbox hinzufügen
+
+**Schritt 1:** Provider-Klasse in `app/inbox/receipt_extractor.py` anlegen. Kontrakt:
+
+```python
+class MyProvider:
+    def __init__(self, config: MyProviderConfig) -> None: ...
+    def extract(self, image_or_pdf_path: Path) -> ReceiptExtractionResult: ...
+```
+
+**Schritt 2:** Config-Schema in `app/config_loader.py` (Pydantic) definieren:
+
+```python
+class MyProviderExtractionConfig(BaseModel):
+    enabled: bool = False
+    api_key: str = ""
+    model: str = "my-model-vl"
+    endpoint: str = "https://api.example.com/v1/extract"
+```
+
+**Schritt 3:** Provider in der Factory-Liste `receipt_extractor._build_provider_chain()` registrieren.
+
+**Schritt 4:** Tests in `tests/unit/test_receipt_extractor.py` ergänzen. Pattern siehe `TestOpenAIProvider` — `_FakeResponse` und `mocker.patch` reichen.
+
+**Schritt 5:** Doku in [INBOX.md §4](INBOX.md#4-ki-provider-wählen) ergänzen.
+
 ---
 
 ## 6. Tests & Qualität
@@ -731,11 +785,13 @@ Cron-Syntax: 5 Felder (`min hour day month weekday`), Zeitzone via `TZ` env.
             ┌─────────────────────┐
             │  E2E / CLI-Tests    │   3 Suites, ~20 Tests
             ├─────────────────────┤
-            │  Integration        │   DB + Engines, ~30 Tests
+            │  Integration        │   DB + Engines, ~50 Tests
             ├─────────────────────┤
-            │  Unit-Tests         │   Pure Functions, ~80 Tests
+            │  Unit-Tests         │   Pure Functions, ~110 Tests
             └─────────────────────┘
 ```
+
+> **Stand 2026-06:** **183 Tests**, alle grün, in ~1,7 s Laufzeit.
 
 ### 6.2 Konventionen
 
@@ -795,6 +851,7 @@ def test_brutto_rendite_for_berlin_mitte():
 | `app/banking/`      | 60 %             | 50-80 % |
 | `app/notifications/`| 60 %             | ~70 %   |
 | `app/alerts/`       | 70 %             | ~85 %   |
+| `app/inbox/`        | 60 %             | ~75 %   |
 | **Gesamt**          | **60 %**         | **73 %** |
 
 ### 6.5 Linting
