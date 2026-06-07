@@ -108,6 +108,8 @@ Falls `unhealthy`: Klick auf den Container → **Logs** → Fehlermeldung prüfe
 
 ### Schritt 5: Initialisierung
 
+> **Config-Auto-Init:** Beim ersten Start kopiert FinanzHub automatisch alle `config.example/*`-YAML-Dateien in das Volume `finanzhub_config`. Es sind **keine manuellen Datei-Kopien** nötig — der Stack läuft sofort mit Dummy-Werten. Du kannst die Configs später via Portainer-Volumes-Browser oder `docker exec` anpassen.
+
 Container → **Console** → **Connect**:
 
 ```bash

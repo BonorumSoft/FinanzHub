@@ -503,6 +503,7 @@ Verwendet `Click 8.x` mit folgenden Konventionen:
 
 ### 4.7 `app/main.py` — Bootstrap
 
+- **Config-Auto-Init**: `_ensure_config_dir()` kopiert beim ersten Start alle `config.example/*`-Dateien nach `/app/config/`, wenn dort noch keine YAML-Dateien liegen. So funktioniert ein leerer Volume-Mount sofort.
 - Lädt `settings.yaml` zuerst, validiert via Pydantic
 - Instanziiert Engine + DB-Pool
 - Startet APScheduler mit konfigurierten Cron-Jobs

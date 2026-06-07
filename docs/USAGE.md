@@ -73,6 +73,8 @@ cp -r config.example/ config/
 
 Die Demo-Bank ist bereits aktiviert — Sie brauchen **nichts** zu konfigurieren.
 
+> **Docker/Portainer:** Beim ersten Start kopiert FinanzHub automatisch alle Configs aus `config.example/` in das Volume — kein manuelles `cp` nötig.
+
 ### Schritt 3: Python-Umgebung einrichten
 
 ```bash
