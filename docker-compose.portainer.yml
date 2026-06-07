@@ -93,7 +93,9 @@ services:
         condition: service_healthy
 
     networks:
-      - finanzhub_net
+      finanzhub_internal:
+      mvl-200:
+        ipv4_address: 192.168.200.50
 
     # Health-Check: Portainer zeigt Status (healthy/unhealthy)
     healthcheck:
@@ -132,7 +134,7 @@ services:
     # Persistenter DB-Dump wird mit pg_dump erstellt (siehe Backup-Strategie)
 
     networks:
-      - finanzhub_net
+      - finanzhub_internal
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
@@ -172,6 +174,12 @@ networks:
   finanzhub_net:
     name: finanzhub_net
     driver: bridge
+  finanzhub_internal:
+    name: finanzhub_internal
+    external: true
+  mvl-200:
+    name: mvl-200
+    external: true
 
 # =============================================================================
 # Secrets (Beispiel — in Portainer unter "Secrets" anlegen)
