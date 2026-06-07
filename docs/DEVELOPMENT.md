@@ -534,6 +534,30 @@ Verarbeitet eingehende E-Mails, extrahiert Kassenbon-Daten via KI und matcht sie
 
 **Tests:** 53 neue Tests (5 Dateien in `tests/unit/` + `tests/integration/test_inbox_engine.py`). Detail-Doku: [INBOX.md](INBOX.md).
 
+### 4.9 `app/web/` — Web-UI Dashboard
+
+Flask-basiertes Dashboard mit Chart.js und Passwort-Login. Läuft in einem **Daemon-Thread** parallel zum Scheduler.
+
+| Datei                             | Verantwortung                                  |
+| --------------------------------- | ---------------------------------------------- |
+| `server.py`                       | Flask-App, 5 Routes + DB-Queries               |
+| `auth.py`                         | Session-Login, Passwort aus `WEB_PASSWORD`     |
+| `static/web.css`                  | Minimales CSS (kein Framework)                 |
+| `templates/web/layout.html`       | Basis-Layout mit Navigation                    |
+| `templates/web/dashboard.html`    | Übersicht: Vermögen, Chart, Letzte Buchungen   |
+| `templates/web/transactions.html` | Buchungsliste mit Zeitfilter (7d/30d/90d/1J)   |
+| `templates/web/inbox.html`        | Beleg-Inbox mit Status-Filter                  |
+| `templates/web/settings.html`     | Config-Anzeige (read-only)                     |
+| `templates/web/login.html`        | Login-Seite                                    |
+
+**Auth:** Einfaches Shared-Password aus `WEB_PASSWORD` env. Wenn nicht gesetzt: temporäres Passwort im Log (`WARNING`).
+
+**Steuerung via Env-Vars:**
+- `WEB_ENABLED=true` – Web-UI aktivieren (default: true)
+- `WEB_PORT=8080` – Port (default: 8080)
+- `WEB_HOST=0.0.0.0` – Bind-Addresse (default: 0.0.0.0)
+- `WEB_PASSWORD=<pass>` – Login-Passwort (sonst: temporär im Log)
+
 ---
 
 ## 5. FinanzHub erweitern

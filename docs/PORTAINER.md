@@ -80,6 +80,8 @@ Im Stack-Editor unter **Environment variables** > **Advanced mode**:
 | `OPENAI_API_KEY`   | `sk-...`                               | nein (Cloud-Provider) |
 | `ANTHROPIC_API_KEY`| `sk-ant-...`                           | nein (Cloud-Fallback) |
 | `INBOX_SMTP_HOST`  | `smtp.gmail.com`                       | nein (Bestätigungs-Mail) |
+| `WEB_PASSWORD`     | `sicheres-passwort`                   | nein (sonst temporär im Log) |
+| `WEB_PORT`         | `8080`                                 | nein (default 8080) |
 
 > **Wichtig:** `DB_PASSWORD` MUSS gesetzt sein, sonst startet der Container nicht!
 

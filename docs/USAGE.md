@@ -890,6 +890,40 @@ Ausführliche Doku: [INBOX.md](INBOX.md).
 
 ---
 
+## 12. Web-UI Dashboard
+
+FinanzHub hat ein integriertes Web-UI (Flask) für Browser-Zugriff.
+
+### 12.1 Aktivierung
+
+Das Web-UI startet **automatisch** auf Port 8080, sobald der Container läuft. Steuerbar via Env-Vars:
+
+| Variable         | Default   | Beschreibung                          |
+| ---------------- | --------- | ------------------------------------- |
+| `WEB_ENABLED`    | `true`    | Web-UI ein/aus                        |
+| `WEB_PORT`       | `8080`    | HTTP-Port                              |
+| `WEB_HOST`       | `0.0.0.0` | Bind-Addresse (0.0.0.0 = alle IFs)   |
+| `WEB_PASSWORD`   | (auto)    | Login-Passwort (wenn leer: temporär im Log) |
+
+### 12.2 Login
+
+`http://<dein-server>:8080` → Passwort eingeben. Wird kein `WEB_PASSWORD` gesetzt, generiert das System ein temporäres Passwort und loggt es beim Start als `WARNING`:
+
+```
+WARNING app.web.auth: Kein WEB_PASSWORD gesetzt – verwende temporäres Passwort: aB3x…
+```
+
+### 12.3 Seiten
+
+| Seite          | Beschreibung                                                     |
+| -------------- | ---------------------------------------------------------------- |
+| **Dashboard**  | Vermögen (4 Cards), Nettovermögen-Chart (90d), Kontostände, Letzte Buchungen, Ereignisse |
+| **Buchungen**  | Transaktionsliste mit Zeitfilter (7d/30d/90d/1J), Summenzeile   |
+| **Belege**     | Beleg-Inbox mit Status-Filter (alle/pending/extracted/matched/error) |
+| **Einstellungen** | Read-only-Ansicht der geladenen YAML-Configs                  |
+
+---
+
 **Weiterführend:**
 
 - [Entwickler­dokumentation](DEVELOPMENT.md) — Architektur, Module, Erweiterung

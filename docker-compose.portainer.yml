@@ -70,6 +70,11 @@ services:
       # INBOX_SMTP_PASS: ${INBOX_SMTP_PASS:-}
       # INBOX_SMTP_FROM: ${INBOX_SMTP_FROM:-}
 
+      # --- Optional: Web-UI Dashboard ---
+      WEB_PASSWORD: ${WEB_PASSWORD:-}
+      WEB_PORT: ${WEB_PORT:-8080}
+      WEB_HOST: ${WEB_HOST:-0.0.0.0}
+
     # Persistente Daten (Konfiguration + Logs + Reports)
     # Diese Volumes MÜSSEN in Portainer als "bind mount" oder
     # benannte Volumes angelegt werden. Standard: benannte Volumes
