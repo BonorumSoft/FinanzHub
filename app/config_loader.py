@@ -447,11 +447,10 @@ def load_income(config_dir: str | os.PathLike[str] | None = None) -> IncomeConfi
 
 
 def load_inbox(config_dir: str | os.PathLike[str] | None = None) -> InboxConfig:
-    return _validate(
-        InboxConfig,
-        _read_yaml(Path(config_dir or DEFAULT_CONFIG_DIR) / "inbox.yaml"),
-        "inbox.yaml",
-    )
+    data = _read_yaml(Path(config_dir or DEFAULT_CONFIG_DIR) / "inbox.yaml")
+    if "inbox" in data:
+        data = data["inbox"]
+    return _validate(InboxConfig, data, "inbox.yaml")
 
 
 def load_all(config_dir: str | os.PathLike[str] | None = None) -> dict[str, BaseModel]:
