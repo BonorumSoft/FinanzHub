@@ -2,7 +2,7 @@
 -- Beleg-Inbox: KI-Extraktion aus Kassenbons / Rechnungen
 
 CREATE TABLE IF NOT EXISTS receipts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
 
     -- Herkunft
     source_email TEXT NOT NULL,
