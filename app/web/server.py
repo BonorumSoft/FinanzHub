@@ -9,7 +9,10 @@ from sqlalchemy.engine import Engine
 
 from app.config_loader import load_all
 from app.data.db import execute
+from app.logger import get_logger
 from app.web.auth import do_login, do_logout, login_required
+
+logger = get_logger(__name__)
 
 HERE = Path(__file__).resolve().parent
 
@@ -47,12 +50,14 @@ def _create_app(engine: Engine) -> Flask:
         today = date.today()
         start_30 = today - timedelta(days=30)
 
-        row = _latest_networth(engine)
-        recent = _recent_transactions(engine, 10)
-        nw_history = _networth_history(engine, 90)
-        events = _recent_events(engine, 5)
-        inbox_stats = _inbox_status(engine)
-        balances = _account_balances(engine)
+        row = _safe_query(engine, _LATEST_NW_SQL)
+        row = row[0] if row else None
+        recent = _safe_query(engine, _RECENT_TX_SQL, {"l": 10}, default=[])
+        nw_history = _safe_query(engine, _NW_HISTORY_SQL, {"s": (date.today() - timedelta(days=90)).isoformat()}, default=[])
+        events = _safe_query(engine, _EVENTS_SQL, {"l": 5}, default=[])
+        inbox_stats_raw = _safe_query(engine, _INBOX_SQL, default=[])
+        inbox_stats = {r["status"]: r["cnt"] for r in inbox_stats_raw} if inbox_stats_raw else {}
+        balances = _safe_query(engine, _BALANCES_SQL, default=[])
 
         return render_template(
             "web/dashboard.html",
@@ -74,13 +79,14 @@ def _create_app(engine: Engine) -> Flask:
         except ValueError:
             days_int = 30
         since = (date.today() - timedelta(days=days_int)).isoformat()
-        rows = execute(
+        rows = _safe_query(
             engine,
             "SELECT transaction_id, account_id, booking_date, amount, "
             "description, counterparty_name, counterparty_iban, category "
             "FROM transactions WHERE booking_date >= :s "
             "ORDER BY booking_date DESC, id DESC LIMIT 200",
             {"s": since},
+            default=[],
         )
         total = sum(r["amount"] for r in rows) if rows else 0
         return render_template(
@@ -95,7 +101,7 @@ def _create_app(engine: Engine) -> Flask:
     @login_required
     def inbox():
         status_filter = request.args.get("status", "")
-        sql = (
+        base_sql = (
             "SELECT id, source_email, source_subject, received_at, "
             "original_filename, extracted_date, extracted_amount, "
             "extracted_merchant, status, match_confidence, steuerrelevant "
@@ -103,11 +109,12 @@ def _create_app(engine: Engine) -> Flask:
         )
         params: dict[str, Any] = {}
         if status_filter:
-            sql += " WHERE status = :s"
+            base_sql += " WHERE status = :s"
             params["s"] = status_filter
-        sql += " ORDER BY received_at DESC LIMIT 100"
-        rows = execute(engine, sql, params) if engine else []
-        counts = _inbox_status(engine) if engine else {}
+        base_sql += " ORDER BY received_at DESC LIMIT 100"
+        rows = _safe_query(engine, base_sql, params, default=[])
+        inbox_stats_raw = _safe_query(engine, _INBOX_SQL, default=[])
+        counts = {r["status"]: r["cnt"] for r in inbox_stats_raw} if inbox_stats_raw else {}
         return render_template(
             "web/inbox.html",
             rows=rows,
@@ -127,69 +134,51 @@ def _create_app(engine: Engine) -> Flask:
     return app
 
 
+def _safe_query(engine: Engine, sql: str, params: dict[str, Any] | None = None,
+                default: Any = None) -> Any:
+    try:
+        return execute(engine, sql, params or {})
+    except Exception as err:
+        logger.warning("Web-UI Query fehlgeschlagen: %s", err)
+        return default
+
+
 def _redirect(path: str):
     from flask import redirect as r
     return r(path)
 
 
-def _latest_networth(engine: Engine) -> dict[str, Any] | None:
-    rows = execute(
-        engine,
-        "SELECT snapshot_date, bank_total, securities_total, "
-        "real_estate_equity, net_worth FROM networth_history "
-        "ORDER BY snapshot_date DESC LIMIT 1",
-    )
-    return rows[0] if rows else None
+_LATEST_NW_SQL = (
+    "SELECT snapshot_date, bank_total, securities_total, "
+    "real_estate_equity, net_worth FROM networth_history "
+    "ORDER BY snapshot_date DESC LIMIT 1"
+)
 
+_NW_HISTORY_SQL = (
+    "SELECT snapshot_date, net_worth, bank_total, securities_total, "
+    "real_estate_equity FROM networth_history WHERE snapshot_date >= :s "
+    "ORDER BY snapshot_date"
+)
 
-def _networth_history(engine: Engine, days: int) -> list[dict[str, Any]]:
-    since = (date.today() - timedelta(days=days)).isoformat()
-    return execute(
-        engine,
-        "SELECT snapshot_date, net_worth, bank_total, securities_total, real_estate_equity "
-        "FROM networth_history WHERE snapshot_date >= :s ORDER BY snapshot_date",
-        {"s": since},
-    )
+_RECENT_TX_SQL = (
+    "SELECT transaction_id, account_id, booking_date, amount, "
+    "description, counterparty_name FROM transactions "
+    "ORDER BY booking_date DESC, id DESC LIMIT :l"
+)
 
+_EVENTS_SQL = (
+    "SELECT event_type, entity_id, period, details, detected_at "
+    "FROM events ORDER BY detected_at DESC LIMIT :l"
+)
 
-def _recent_transactions(engine: Engine, limit: int) -> list[dict[str, Any]]:
-    return execute(
-        engine,
-        "SELECT transaction_id, account_id, booking_date, amount, "
-        "description, counterparty_name FROM transactions "
-        "ORDER BY booking_date DESC, id DESC LIMIT :l",
-        {"l": limit},
-    )
+_INBOX_SQL = "SELECT status, COUNT(*) as cnt FROM receipts GROUP BY status"
 
-
-def _recent_events(engine: Engine, limit: int) -> list[dict[str, Any]]:
-    return execute(
-        engine,
-        "SELECT event_type, entity_id, period, details, detected_at, severity "
-        "FROM events ORDER BY detected_at DESC LIMIT :l",
-        {"l": limit},
-    )
-
-
-def _inbox_status(engine: Engine) -> dict[str, int]:
-    rows = execute(
-        engine,
-        "SELECT status, COUNT(*) as cnt FROM receipts GROUP BY status",
-    )
-    counts: dict[str, int] = {}
-    for row in rows or []:
-        counts[row["status"]] = row["cnt"]
-    return counts
-
-
-def _account_balances(engine: Engine) -> list[dict[str, Any]]:
-    return execute(
-        engine,
-        "SELECT account_id, balance, currency, recorded_at "
-        "FROM balances b WHERE recorded_at = (SELECT MAX(recorded_at) "
-        "FROM balances b2 WHERE b2.account_id = b.account_id) "
-        "ORDER BY account_id",
-    )
+_BALANCES_SQL = (
+    "SELECT account_id, balance, currency, recorded_at "
+    "FROM balances b WHERE recorded_at = (SELECT MAX(recorded_at) "
+    "FROM balances b2 WHERE b2.account_id = b.account_id) "
+    "ORDER BY account_id"
+)
 
 
 def serve(engine: Engine, host: str = "0.0.0.0", port: int = 8080) -> None:
