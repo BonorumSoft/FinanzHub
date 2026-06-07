@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 import signal
 import sys
+import threading
 from datetime import date
 from typing import Any
 
@@ -195,6 +196,22 @@ def main() -> int:
         inbox_poll=inbox_poll_callable,
         inbox_poll_seconds=inbox_poll_seconds,
     )
+
+    web_port = int(os.environ.get("WEB_PORT", "8080"))
+    web_host = os.environ.get("WEB_HOST", "0.0.0.0")
+    web_enabled = os.environ.get("WEB_ENABLED", "true").lower() in ("true", "1", "yes")
+    if web_enabled:
+        try:
+            from app.web.server import serve as web_serve
+            web_thread = threading.Thread(
+                target=web_serve,
+                args=(engine, web_host, web_port),
+                daemon=True,
+            )
+            web_thread.start()
+            logger.info("Web-UI gestartet auf http://%s:%d", web_host, web_port)
+        except Exception as err:
+            logger.warning("Web-UI konnte nicht gestartet werden: %s", err)
 
     stop_requested = {"flag": False}
 

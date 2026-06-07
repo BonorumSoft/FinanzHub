@@ -1,0 +1,37 @@
+{% extends "web/layout.html" %}
+{% block content %}
+{% set title = 'Einstellungen' %}
+
+{% for section, cfg in config.items() %}
+<div class="card">
+  <h2 style="margin-bottom:8px;">{{ section }}</h2>
+  {% if cfg %}
+  <table>
+    {% for key, value in cfg.items() %}
+    <tr>
+      <td style="width:250px;font-weight:600;color:var(--slate-600);">{{ key }}</td>
+      <td>
+        {% if value is mapping %}
+          <details>
+            <summary style="cursor:pointer;color:var(--blue);">Objekt ({{ value|length }} Felder)</summary>
+            <table style="margin-top:8px;">
+              {% for k2, v2 in value.items() %}
+              <tr><td style="padding:4px 8px;font-weight:500;">{{ k2 }}</td><td style="padding:4px 8px;">{{ v2 }}</td></tr>
+              {% endfor %}
+            </table>
+          </details>
+        {% elif value is iterable and value is not string %}
+          <span>{{ value|join(", ") }}</span>
+        {% else %}
+          <span>{{ value }}</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="sub">Keine Konfiguration geladen</p>
+  {% endif %}
+</div>
+{% endfor %}
+{% endblock %}

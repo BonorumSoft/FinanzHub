@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FinanzHub – {{ title|default('Dashboard') }}</title>
+  <link rel="stylesheet" href="/static/web/web.css">
+</head>
+<body>
+
+<div class="navbar">
+  <a href="/" class="brand">FinanzHub</a>
+  <a href="/" class="{% if request.path == '/' %}active{% endif %}">Dashboard</a>
+  <a href="/transactions" class="{% if request.path == '/transactions' %}active{% endif %}">Buchungen</a>
+  <a href="/inbox" class="{% if request.path == '/inbox' %}active{% endif %}">Belege</a>
+  <a href="/settings" class="{% if request.path == '/settings' %}active{% endif %}">Einstellungen</a>
+  <a href="/logout" style="color: var(--slate-400);">Logout</a>
+</div>
+
+<div class="container">
+  {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>

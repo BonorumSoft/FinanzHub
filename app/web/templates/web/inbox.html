@@ -1,0 +1,56 @@
+{% extends "web/layout.html" %}
+{% block content %}
+{% set title = 'Belege' %}
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <h2 style="margin:0;">Beleg-Inbox</h2>
+    <div class="filters">
+      <a href="/inbox" class="{{ 'active' if not current_status }}">Alle</a>
+      <a href="/inbox?status=pending" class="{{ 'active' if current_status == 'pending' }}">Ausstehend</a>
+      <a href="/inbox?status=extracted" class="{{ 'active' if current_status == 'extracted' }}">Extrahiert</a>
+      <a href="/inbox?status=matched" class="{{ 'active' if current_status == 'matched' }}">Gematched</a>
+      <a href="/inbox?status=error" class="{{ 'active' if current_status == 'error' }}">Fehler</a>
+    </div>
+  </div>
+
+  {% if counts %}
+  <div class="stats-row">
+    {% for s, c in counts.items() %}
+    <span class="badge badge-{{ 'green' if s == 'matched' else 'amber' if s in ('pending','extracted') else 'red' if s == 'error' else 'gray' }}">
+      {{ s }}: {{ c }}
+    </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <table>
+    <tr>
+      <th>ID</th>
+      <th>Datum</th>
+      <th>Betrag</th>
+      <th>Händler</th>
+      <th>Datei</th>
+      <th>Status</th>
+      <th>Steuer</th>
+    </tr>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r.id }}</td>
+      <td>{{ r.extracted_date|default(r.received_at[:10]) }}</td>
+      <td>{{ "%.2f"|format(r.extracted_amount) if r.extracted_amount else "—" }}</td>
+      <td>{{ r.extracted_merchant|truncate(30) if r.extracted_merchant else "—" }}</td>
+      <td style="font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;">{{ r.original_filename }}</td>
+      <td>
+        <span class="badge badge-{{ 'green' if r.status == 'matched' else 'blue' if r.status == 'extracted' else 'amber' if r.status == 'pending' else 'red' }}">
+          {{ r.status }}
+        </span>
+      </td>
+      <td>{{ "✓" if r.steuerrelevant else "—" }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--slate-400);">Keine Belege</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

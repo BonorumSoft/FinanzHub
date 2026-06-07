@@ -1,0 +1,40 @@
+{% extends "web/layout.html" %}
+{% block content %}
+{% set title = 'Buchungen' %}
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <h2 style="margin:0;">Buchungen (letzte {{ days }} Tage)</h2>
+    <div class="filters">
+      <a href="/transactions?days=7" class="{{ 'active' if days == 7 }}">7d</a>
+      <a href="/transactions?days=30" class="{{ 'active' if days == 30 }}">30d</a>
+      <a href="/transactions?days=90" class="{{ 'active' if days == 90 }}">90d</a>
+      <a href="/transactions?days=365" class="{{ 'active' if days == 365 }}">1J</a>
+    </div>
+  </div>
+  <div class="stats-row">Summe: <strong class="{{ 'positive' if total >= 0 else 'negative' }}">{{ "%.2f"|format(total) }} EUR</strong> · {{ rows|length }} Buchungen</div>
+
+  <table>
+    <tr>
+      <th>Datum</th>
+      <th>Konto</th>
+      <th>Betrag</th>
+      <th>Empfänger</th>
+      <th>Verwendungszweck</th>
+      <th>Kategorie</th>
+    </tr>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r.booking_date }}</td>
+      <td style="font-size:12px;">{{ r.account_id }}</td>
+      <td class="{{ 'positive' if r.amount >= 0 else 'negative' }}">{{ "%.2f"|format(r.amount) }}</td>
+      <td>{{ r.counterparty_name|truncate(25) if r.counterparty_name else "—" }}</td>
+      <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.description|truncate(50) if r.description else "—" }}</td>
+      <td>{{ r.category|default("—") }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--slate-400);">Keine Buchungen gefunden</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

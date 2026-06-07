@@ -1,0 +1,144 @@
+{% extends "web/layout.html" %}
+{% block content %}
+
+{% set title = 'Dashboard' %}
+
+<div class="grid-4">
+  <div class="card">
+    <h2>Vermögen</h2>
+    <div class="value">{{ "%.2f"|format(nw.net_worth) if nw else "—" }}</div>
+    <div class="sub">per {{ nw.snapshot_date if nw else "—" }}</div>
+  </div>
+  <div class="card">
+    <h2>Bankguthaben</h2>
+    <div class="value">{{ "%.2f"|format(nw.bank_total) if nw else "—" }}</div>
+    <div class="sub">Kontostand gesamt</div>
+  </div>
+  <div class="card">
+    <h2>Wertpapiere</h2>
+    <div class="value">{{ "%.2f"|format(nw.securities_total) if nw else "—" }}</div>
+    <div class="sub">Depotwert</div>
+  </div>
+  <div class="card">
+    <h2>Immobilien</h2>
+    <div class="value">{{ "%.2f"|format(nw.real_estate_equity) if nw else "—" }}</div>
+    <div class="sub">Eigenkapital</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>Vermögensentwicklung (90 Tage)</h2>
+    <div class="chart-container">
+      <canvas id="nwChart"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Kontostände</h2>
+    {% if balances %}
+    <table>
+      <tr><th>Konto</th><th>Saldo</th><th>Stand</th></tr>
+      {% for b in balances %}
+      <tr>
+        <td>{{ b.account_id }}</td>
+        <td class="{{ 'positive' if b.balance >= 0 else 'negative' }}">
+          {{ "%.2f"|format(b.balance) }} {{ b.currency|default('EUR') }}
+        </td>
+        <td>{{ b.recorded_at[:10] if b.recorded_at else "—" }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="sub" style="padding:20px 0;">Keine Daten</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>Letzte Buchungen</h2>
+    {% if recent %}
+    <table>
+      <tr><th>Datum</th><th>Konto</th><th>Betrag</th><th>Verwendungszweck</th></tr>
+      {% for r in recent %}
+      <tr>
+        <td>{{ r.booking_date }}</td>
+        <td>{{ r.account_id }}</td>
+        <td class="{{ 'positive' if r.amount >= 0 else 'negative' }}">
+          {{ "%.2f"|format(r.amount) }}
+        </td>
+        <td>{{ r.description|truncate(40) if r.description else "—" }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="sub" style="padding:20px 0;">Keine Buchungen</p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h2>Letzte Ereignisse</h2>
+    {% if events %}
+    <table>
+      <tr><th>Typ</th><th>Details</th><th>Erkannt</th></tr>
+      {% for e in events %}
+      <tr>
+        <td><span class="badge badge-{{ 'red' if e.event_type == 'critical' else 'amber' if e.event_type == 'warning' else 'blue' }}">{{ e.event_type }}</span></td>
+        <td style="font-size:12px;">{{ e.entity_id|default("") }} {{ e.period|default("") }}</td>
+        <td>{{ e.detected_at[:16] if e.detected_at else "—" }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="sub" style="padding:20px 0;">Keine Ereignisse</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <h2>Beleg-Inbox Status</h2>
+  {% if inbox_stats %}
+  <div class="stats-row">
+    {% for s, c in inbox_stats.items() %}
+    <span class="badge badge-{{ 'green' if s == 'matched' else 'amber' if s == 'pending' else 'red' if s == 'error' else 'gray' }}">
+      {{ s }}: {{ c }}
+    </span>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="sub">Keine Belege</p>
+  {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+{% if nw_history and nw_history|length > 1 %}
+const ctx = document.getElementById('nwChart').getContext('2d');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: [{% for h in nw_history %}'{{ h.snapshot_date }}'{% if not loop.last %},{% endif %}{% endfor %}],
+    datasets: [
+      {
+        label: 'Nettovermögen',
+        data: [{% for h in nw_history %}{{ h.net_worth }}{% if not loop.last %},{% endif %}{% endfor %}],
+        borderColor: '#0f172a',
+        backgroundColor: 'rgba(15,23,42,0.1)',
+        fill: true,
+        tension: 0.3,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { maxTicksLimit: 10, font: { size: 10 } } },
+      y: { ticks: { font: { size: 10 } } }
+    }
+  }
+});
+{% endif %}
+</script>
+
+{% endblock %}

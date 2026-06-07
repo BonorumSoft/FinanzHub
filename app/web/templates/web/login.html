@@ -1,0 +1,16 @@
+{% extends "web/layout.html" %}
+{% block content %}
+<div class="login-page" style="margin:-24px;">
+  <div class="login-card">
+    <h1>FinanzHub</h1>
+    <p>Bitte anmelden</p>
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+    <form method="post">
+      <input type="password" name="password" placeholder="Passwort" autofocus style="margin-bottom:16px;">
+      <button type="submit" class="btn btn-primary">Anmelden</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -23,6 +23,7 @@ dependencies = [
     "PyJWT>=2.8",
     "cryptography>=42.0",
     "tabulate>=0.9",
+    "Flask>=3.0.0",
 ]
 
 [project.optional-dependencies]
