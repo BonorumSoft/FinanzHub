@@ -16,11 +16,9 @@ Die Sequenz folgt strikt der Spec:
 from __future__ import annotations
 
 import os
-import shutil
 import signal
 import sys
 from datetime import date
-from pathlib import Path
 from typing import Any
 
 from sqlalchemy.engine import Engine
@@ -143,41 +141,9 @@ def _build_cycle_functions(engine: Engine, configs: dict[str, Any]) -> dict[str,
     return {"daily": daily, "monthly": monthly, "quarterly": quarterly}
 
 
-def _ensure_config_dir() -> None:
-    config_dir = Path(os.environ.get("CONFIG_DIR", "/app/config"))
-    example_dir = Path("/app/config.example")
-
-    if not config_dir.exists():
-        config_dir.mkdir(parents=True, exist_ok=True)
-
-    # Prüfen, ob Config-Dateien vorhanden sind (z. B. settings.yaml)
-    yaml_files = list(config_dir.glob("*.yaml")) + list(config_dir.glob("*.yml"))
-    if yaml_files:
-        logger.info("Config-Verzeichnis %s hat %d YAML-Datei(en) – kein Initialisieren nötig", config_dir, len(yaml_files))
-        return
-
-    if not example_dir.exists():
-        logger.warning("Keine Beispiel-Configs in %s gefunden – überspringe Init", example_dir)
-        return
-
-    for src in sorted(example_dir.iterdir()):
-        if src.is_file():
-            dst = config_dir / src.name
-            try:
-                shutil.copy2(src, dst)
-                logger.info("  Config kopiert: %s", src.name)
-            except OSError as err:
-                logger.warning("  Konnte %s nicht kopieren (read-only?): %s", src.name, err)
-
-    copied = len(list(config_dir.glob("*.yaml"))) + len(list(config_dir.glob("*.yml")))
-    logger.info("Config-Verzeichnis initialisiert (%d YAML-Dateien aus %s)", copied, example_dir)
-
-
 def main() -> int:
     _startup_configure_logging()
     logger.info("FinanzHub startet")
-
-    _ensure_config_dir()
 
     try:
         configs = _load_config_or_exit()

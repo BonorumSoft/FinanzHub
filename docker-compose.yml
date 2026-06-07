@@ -14,7 +14,7 @@ services:
       LOG_LEVEL: INFO
       TZ: Europe/Berlin
     volumes:
-      - ./config:/app/config:ro
+      - ./config:/app/config
       - ./output:/app/output
       - ./logs:/app/logs
     depends_on:
